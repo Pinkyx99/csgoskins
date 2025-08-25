@@ -1,0 +1,5 @@
+{
+  "name": "CSGOSkins Simulator",
+  "description": "A feature-rich CS:GO gambling site simulator with case openings, upgraders, and more, built with React and Tailwind CSS for a modern, responsive user experience.",
+  "requestFramePermissions": []
+}

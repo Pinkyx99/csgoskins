@@ -1,10 +1,10 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import { MOCK_CASES } from '../constants';
 import CaseCard from '../components/ui/CaseCard';
-import ThemedCaseCard from '../components/ui/ThemedCaseCard';
 import { Case } from '../types';
 
 const HomePage: React.FC = () => {
@@ -49,7 +49,7 @@ const HomePage: React.FC = () => {
     }, [search, price]);
     
     const anniversaryCases = filteredCases.filter(c => c.category === 'anniversary');
-    const themedCases = filteredCases.filter(c => c.category === 'themed');
+    const stickerCases = filteredCases.filter(c => c.category === 'sticker');
     const regularCases = filteredCases.filter(c => c.category === 'regular');
 
     const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,7 +90,16 @@ const HomePage: React.FC = () => {
                 ))}
             </div>
 
-            <div className="bg-[#12233f] border border-blue-900/50 rounded-lg p-4 mb-8 flex flex-col md:flex-row items-center gap-4 fade-in-up animation-delay-400">
+             <div className="my-12 fade-in-up animation-delay-400">
+                <h2 className="text-3xl font-bold mb-6 text-center">Sticker Cases</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {stickerCases.map(caseItem => (
+                       <CaseCard key={caseItem.id} caseItem={caseItem} onClick={() => navigate(`/cases?case=${caseItem.id}`)} />
+                    ))}
+                </div>
+            </div>
+
+            <div className="bg-[#12233f] border border-blue-900/50 rounded-lg p-4 mb-8 flex flex-col md:flex-row items-center gap-4 fade-in-up animation-delay-500">
                 <div className="relative w-full md:w-1/3">
                     <input type="text" placeholder="Search case by name..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[#0d1a2f] border border-blue-800/50 rounded-md py-2.5 pl-4 pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>
@@ -104,14 +113,6 @@ const HomePage: React.FC = () => {
                     <span className="text-white font-semibold w-24 text-right">{price.toFixed(2)}€</span>
                 </div>
                 <button onClick={() => { setSearch(''); setPrice(400); }} className="text-gray-400 hover:text-white transition-colors hover:bg-blue-800/20 px-3 py-1.5 rounded-md">Clear filters</button>
-            </div>
-
-            <div className="bg-cover bg-center rounded-lg p-6 mb-8 fade-in-up animation-delay-500" style={{backgroundImage: "url('https://i.imgur.com/rN4jV8e.png')"}}>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
-                    {themedCases.map(caseItem => (
-                       <ThemedCaseCard key={caseItem.id} caseItem={caseItem} onClick={() => navigate(`/cases?case=${caseItem.id}`)} />
-                    ))}
-                </div>
             </div>
 
             <div className="mb-12 fade-in-up animation-delay-600">

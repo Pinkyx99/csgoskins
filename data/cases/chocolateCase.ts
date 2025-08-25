@@ -1,4 +1,3 @@
-
 import { Skin, SkinRarity } from '../../types';
 
 export const CHOCOLATE_CASE_ITEMS: Skin[] = [

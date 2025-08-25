@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { PublicProfile } from '../types';
@@ -39,7 +40,7 @@ const LeaderboardPage: React.FC = () => {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 fade-in-up">
             <h1 className="text-4xl font-bold text-center mb-8">Top Players</h1>
 
             <div className="bg-[#12233f] border border-blue-900/50 rounded-lg max-w-3xl mx-auto">

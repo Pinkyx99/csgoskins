@@ -34,8 +34,8 @@ serve(async (req) => {
 
   try {
     const { command } = await req.json();
-    const [action, targetUsername, param1, ...reasonParts] = command.split(' ');
-    const reason = reasonParts.join(' ');
+    const parts = command.trim().split(' ');
+    const action = parts[0];
 
     // Create a Supabase client with the user's authorization to verify their identity
     const authHeader = req.headers.get('Authorization');
@@ -60,7 +60,7 @@ serve(async (req) => {
     // VERIFY that the user sending the command is an admin
     const { data: adminProfile, error: adminError } = await serviceSupabaseClient
       .from('profiles')
-      .select('is_admin')
+      .select('is_admin, username')
       .eq('id', user.id)
       .single();
       
@@ -70,65 +70,106 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    // Find the target user's profile
-    const { data: targetProfile, error: targetError } = await serviceSupabaseClient
-      .from('profiles')
-      .select('id')
-      .eq('username', targetUsername)
-      .single();
-
-    if (targetError || !targetProfile) {
-      throw new Error(`User '${targetUsername}' not found.`);
-    }
-
+    
     let responseMessage = '';
-
+    
     // --- COMMAND LOGIC ---
     switch (action) {
-      case '/ban': {
-        const expiresAt = parseDuration(param1);
-        await serviceSupabaseClient.from('profiles').update({ 
-          is_banned: true, 
-          ban_expires_at: expiresAt,
-          ban_reason: reason || 'No reason provided.'
-        }).eq('id', targetProfile.id);
-        responseMessage = `Banned ${targetUsername} ${expiresAt ? `until ${new Date(expiresAt).toLocaleString()}` : 'permanently'}.`;
-        break;
-      }
-      case '/unban': {
-        await serviceSupabaseClient.from('profiles').update({ 
-          is_banned: false, 
-          ban_expires_at: null,
-          ban_reason: null
-        }).eq('id', targetProfile.id);
-        responseMessage = `Unbanned ${targetUsername}.`;
-        break;
-      }
+      case '/ban':
       case '/mute': {
-        const expiresAt = parseDuration(param1);
-        await serviceSupabaseClient.from('profiles').update({ 
-          is_muted: true, 
-          mute_expires_at: expiresAt,
-          mute_reason: reason || 'No reason provided.'
-        }).eq('id', targetProfile.id);
-        responseMessage = `Muted ${targetUsername} ${expiresAt ? `until ${new Date(expiresAt).toLocaleString()}` : 'permanently'}.`;
+        const [_, targetUsername, durationStr, ...reasonParts] = parts;
+        if (!targetUsername || !durationStr) throw new Error(`Usage: ${action} [user] [duration] [reason]`);
+        const reason = reasonParts.join(' ');
+
+        const { data: targetProfile, error: targetError } = await serviceSupabaseClient.from('profiles').select('id').eq('username', targetUsername).single();
+        if (targetError || !targetProfile) throw new Error(`User '${targetUsername}' not found.`);
+
+        const expiresAt = parseDuration(durationStr);
+        const updatePayload = action === '/ban'
+          ? { is_banned: true, ban_expires_at: expiresAt, ban_reason: reason || 'No reason provided.' }
+          : { is_muted: true, mute_expires_at: expiresAt, mute_reason: reason || 'No reason provided.' };
+        
+        await serviceSupabaseClient.from('profiles').update(updatePayload).eq('id', targetProfile.id);
+        const actionPastTense = action === '/ban' ? 'Banned' : 'Muted';
+        responseMessage = `${actionPastTense} ${targetUsername} ${expiresAt ? `until ${new Date(expiresAt).toLocaleString()}` : 'permanently'}.`;
         break;
       }
+      case '/unban':
       case '/unmute': {
-        await serviceSupabaseClient.from('profiles').update({ 
-          is_muted: false, 
-          mute_expires_at: null,
-          mute_reason: null
-        }).eq('id', targetProfile.id);
-        responseMessage = `Unmuted ${targetUsername}.`;
+        const [_, targetUsername] = parts;
+        if (!targetUsername) throw new Error(`Usage: ${action} [user]`);
+
+        const { data: targetProfile, error: targetError } = await serviceSupabaseClient.from('profiles').select('id').eq('username', targetUsername).single();
+        if (targetError || !targetProfile) throw new Error(`User '${targetUsername}' not found.`);
+        
+        const updatePayload = action === '/unban'
+          ? { is_banned: false, ban_expires_at: null, ban_reason: null }
+          : { is_muted: false, mute_expires_at: null, mute_reason: null };
+
+        await serviceSupabaseClient.from('profiles').update(updatePayload).eq('id', targetProfile.id);
+        const actionPastTense = action === '/unban' ? 'Unbanned' : 'Unmuted';
+        responseMessage = `${actionPastTense} ${targetUsername}.`;
         break;
       }
       case '/set_balance': {
-        const amount = parseFloat(param1);
+        const [_, targetUsername, amountStr] = parts;
+        if (!targetUsername || !amountStr) throw new Error('Usage: /set_balance [user] [amount]');
+        const amount = parseFloat(amountStr);
         if (isNaN(amount) || amount < 0) throw new Error('Invalid balance amount.');
+
+        const { data: targetProfile, error: targetError } = await serviceSupabaseClient.from('profiles').select('id').eq('username', targetUsername).single();
+        if (targetError || !targetProfile) throw new Error(`User '${targetUsername}' not found.`);
+
         await serviceSupabaseClient.from('profiles').update({ balance: amount }).eq('id', targetProfile.id);
         responseMessage = `Set ${targetUsername}'s balance to ${amount.toFixed(2)}€.`;
+        break;
+      }
+      case '/rain': {
+        const [_, amountStr, claimsStr, minsStr] = parts;
+        if (!amountStr || !claimsStr || !minsStr) throw new Error('Usage: /rain [amount_per_user] [max_claims] [duration_minutes]');
+        const amount = parseFloat(amountStr);
+        const claims = parseInt(claimsStr);
+        const durationMins = parseInt(minsStr);
+        if (isNaN(amount) || isNaN(claims) || isNaN(durationMins)) throw new Error('Invalid arguments for /rain');
+
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + durationMins);
+
+        await serviceSupabaseClient.from('site_events').insert({
+          event_type: 'RAIN',
+          created_by_user_id: user.id,
+          created_by_username: adminProfile.username,
+          data: { amount_per_user: amount, max_claims: claims },
+          expires_at: expiresAt.toISOString(),
+        });
+        responseMessage = `Rain started: ${amount.toFixed(2)}€ for ${claims} users, lasting ${durationMins} minutes.`;
+        break;
+      }
+      case '/announce': {
+        const message = parts.slice(1).join(' ');
+        if (!message) throw new Error('Usage: /announce [message]');
+
+        const expiresAt = new Date();
+        expiresAt.setSeconds(expiresAt.getSeconds() + 15); // Announcement lasts for 15 seconds
+
+        await serviceSupabaseClient.from('site_events').insert({
+          event_type: 'ANNOUNCEMENT',
+          created_by_user_id: user.id,
+          created_by_username: adminProfile.username,
+          data: { message },
+          expires_at: expiresAt.toISOString(),
+        });
+        responseMessage = `Announcement sent: "${message}"`;
+        break;
+      }
+      case '/clear_chat': {
+         await serviceSupabaseClient.from('site_events').insert({
+            event_type: 'CHAT_CLEARED',
+            created_by_user_id: user.id,
+            created_by_username: adminProfile.username,
+        });
+        await serviceSupabaseClient.from('chat_messages').delete().gt('id', 0);
+        responseMessage = 'Global chat has been cleared.';
         break;
       }
       default:

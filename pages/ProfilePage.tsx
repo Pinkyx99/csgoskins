@@ -16,6 +16,7 @@ const ProfilePage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'profile' | 'transactions'>('profile');
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loadingTransactions, setLoadingTransactions] = useState(false);
+    const [sellingSkinIds, setSellingSkinIds] = useState<string[]>([]);
 
     useEffect(() => {
         if (!user) {
@@ -77,10 +78,12 @@ const ProfilePage: React.FC = () => {
         }
     };
 
-    const handleSellSkin = (skin: Skin) => {
-        if (skin.instance_id) {
-            removeSkinFromInventory(skin.instance_id);
-            updateBalance(skin.price);
+    const handleSellSkin = async (skin: Skin) => {
+        if (skin.instance_id && !sellingSkinIds.includes(skin.instance_id)) {
+            setSellingSkinIds(prev => [...prev, skin.instance_id!]);
+            await removeSkinFromInventory(skin.instance_id);
+            await updateBalance(skin.price);
+            // No need to remove from sellingSkinIds, as component will re-render without the skin
         }
     };
     
@@ -96,7 +99,7 @@ const ProfilePage: React.FC = () => {
     );
 
     return (
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-4 py-6 fade-in-up">
             <ProfileNav />
             {activeTab === 'profile' ? (
                 <>
@@ -147,7 +150,12 @@ const ProfilePage: React.FC = () => {
                         {user.inventory.length > 0 ? (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                 {user.inventory.map(skin => (
-                                    <InventorySkinCard key={skin.instance_id} skin={skin} onSell={() => handleSellSkin(skin)} />
+                                    <InventorySkinCard 
+                                        key={skin.instance_id} 
+                                        skin={skin} 
+                                        onSell={() => handleSellSkin(skin)}
+                                        isSelling={sellingSkinIds.includes(skin.instance_id!)}
+                                    />
                                 ))}
                             </div>
                         ) : (

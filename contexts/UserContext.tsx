@@ -68,12 +68,18 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error("Error checking user status:", error);
             setUser(null);
         } else if (profile) {
+             const rawInventory = parseInventory(profile.inventory);
+             const validatedInventory = rawInventory.map((item) => ({
+                 ...item,
+                 instance_id: item.instance_id || crypto.randomUUID()
+             }));
+
              setUser({
                 id: profile.id,
                 name: profile.username,
                 avatar: profile.avatar_url || `https://api.dicebear.com/8.x/bottts/svg?seed=${profile.username}`,
                 balance: Number(profile.balance),
-                inventory: parseInventory(profile.inventory),
+                inventory: validatedInventory,
                 is_admin: profile.is_admin,
                 is_banned: profile.is_banned,
                 ban_expires_at: profile.ban_expires_at,
@@ -160,7 +166,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const addSkinsToInventory = async (skins: Skin[]): Promise<Skin[]> => {
         if (!user || skins.length === 0) return [];
     
-        const newSkinsWithIds = skins.map(s => ({ ...s, instance_id: `${s.id}-${Date.now()}-${Math.random()}` }));
+        const newSkinsWithIds = skins.map(s => ({ ...s, instance_id: crypto.randomUUID() }));
         
         // Optimistic UI update
         setUser(prev => {
@@ -254,7 +260,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const swapSkinsInInventory = async (instanceIdsToRemove: string[], skinToAdd: Skin) => {
         if (!user) return;
 
-        const newSkinWithId = { ...skinToAdd, instance_id: `${skinToAdd.id}-${Date.now()}-${Math.random()}` };
+        const newSkinWithId = { ...skinToAdd, instance_id: crypto.randomUUID() };
 
         // Optimistic UI update
         setUser(prev => {

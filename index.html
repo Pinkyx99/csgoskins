@@ -4,10 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CSGOSkins Simulator</title>
-
-    <!-- Google Search Console Verification -->
-    <meta name="google-site-verification" content="KpBs9kYX31-VZ28vkXDIrRV-WviIdedv6vRkLgOhsRM" />
-
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
@@ -55,6 +51,9 @@
       .animation-delay-500 { animation-delay: 500ms; }
       .animation-delay-600 { animation-delay: 600ms; }
       .animation-delay-700 { animation-delay: 700ms; }
+
+      @keyframes simpleFadeIn { from { opacity: 0; } to { opacity: 1; } }
+      .animate-fade-in { animation: simpleFadeIn 0.3s ease-out forwards; }
 
       /* Spinner animation enhancements */
       .reel-track {
@@ -121,7 +120,7 @@
         border-radius: 50%;
         background: #60a5fa;
         cursor: pointer;
-        margin-top: -6px;
+        margin-top: -6px; /* You need to specify a margin in Chrome, but in Firefox and IE it is automatic */
         border: 2px solid #1e293b;
       }
       input[type=range]::-moz-range-track {
@@ -146,7 +145,7 @@
       }
       .live-winning-card:hover {
         transform: translateY(-4px);
-        background-color: #2a2c4c;
+        background-color: #2a2c4c; /* a slightly lighter shade */
       }
 
       .form-checkbox {
@@ -193,9 +192,9 @@
 <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.1.1",
+    "react/": "https://esm.sh/react@^19.1.1/",
     "react": "https://esm.sh/react@^19.1.1",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
     "react-router-dom": "https://esm.sh/react-router-dom@^7.8.2",
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
   }

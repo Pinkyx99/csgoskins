@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CaseBattle, Reel, Skin, SkinWear } from '../types';
@@ -20,6 +21,7 @@ const CaseBattleRoomPage: React.FC = () => {
     const [countdown, setCountdown] = useState<number | null>(null);
     const [currentRoundReels, setCurrentRoundReels] = useState<Reel[]>([]);
     const [finishedSpinsCount, setFinishedSpinsCount] = useState(0);
+    const [roundSpinningComplete, setRoundSpinningComplete] = useState(false);
     const [isAddingBot, setIsAddingBot] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
 
@@ -157,6 +159,7 @@ const CaseBattleRoomPage: React.FC = () => {
     // All clients: Start spinning when round results are available
     useEffect(() => {
         if (battle?.status === 'in_progress' && battle.current_round_winnings) {
+            setRoundSpinningComplete(false); // Reset for new round
             const roundIndex = battle.current_case_index;
             const currentCaseForRound = battle.cases[roundIndex];
             if (!currentCaseForRound) return;
@@ -186,23 +189,30 @@ const CaseBattleRoomPage: React.FC = () => {
         }
     }, [battle?.current_round_winnings, battle?.status, battle?.current_case_index, battle?.cases, battle?.participants]);
 
-
-    // Creator's client: Finish the round after spins
+    // All clients: Track when all spins are finished
     useEffect(() => {
-        if (isCreator && battle && finishedSpinsCount >= battle.participants.length && battle.current_round_winnings) {
+        if (battle && finishedSpinsCount >= battle.participants.length && battle.current_round_winnings && !roundSpinningComplete) {
+            setRoundSpinningComplete(true);
+        }
+    }, [finishedSpinsCount, battle, roundSpinningComplete]);
+
+    // Creator's client: Finish the round after spins are visually complete
+    useEffect(() => {
+        if (isCreator && battle && roundSpinningComplete) {
             const finishRound = async () => {
                 const { error: rpcError } = await supabase.rpc('finish_battle_round', { p_battle_id: battle.id });
                 if (rpcError) console.error("Error finishing round:", rpcError);
                 else {
                     setFinishedSpinsCount(0);
                     setCurrentRoundReels([]);
+                    setRoundSpinningComplete(false);
                 }
             }
             // Delay to allow clients to see winnings before next round
             const timer = setTimeout(finishRound, POST_SPIN_RESULT_MS);
             return () => clearTimeout(timer);
         }
-    }, [finishedSpinsCount, battle, isCreator]);
+    }, [roundSpinningComplete, battle, isCreator]);
     
     const handleSpinComplete = useCallback(() => {
         setFinishedSpinsCount(prev => prev + 1);
@@ -311,7 +321,7 @@ const CaseBattleRoomPage: React.FC = () => {
                         key={p.id}
                         participant={p}
                         reel={currentRoundReels.find(r => String(r.key).startsWith(p.id))}
-                        isRoundFinished={!!battle.current_round_winnings}
+                        isSpinFinished={roundSpinningComplete}
                         onSpinComplete={handleSpinComplete}
                     />
                 ))}

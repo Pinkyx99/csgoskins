@@ -120,6 +120,7 @@ const UpgraderPage: React.FC = () => {
     const totalInputValue = inventoryValue + balanceToAdd;
 
     const allSkins = useMemo(() => MOCK_CASES.flatMap(c => c.items).filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i).sort((a,b) => a.price - b.price), []);
+    const totalUniqueSkins = allSkins.length;
 
     useEffect(() => {
         if (totalInputValue > 0 && selectedTargetSkin) {
@@ -193,7 +194,7 @@ const UpgraderPage: React.FC = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 fade-in-up">
             <div className="bg-[#12233f] border border-blue-900/50 rounded-lg p-6 mb-8">
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-center gap-6">
                     <ItemSelectionPanel 
@@ -267,6 +268,7 @@ const UpgraderPage: React.FC = () => {
                     selectedSkinId={selectedTargetSkin?.id}
                     onSelectSkin={(skin) => {setSelectedTargetSkin(skin); setActiveMultiplier(null);}}
                     inventorySkinPrice={totalInputValue}
+                    totalUniqueSkins={totalUniqueSkins}
                 />
             </div>
         </div>

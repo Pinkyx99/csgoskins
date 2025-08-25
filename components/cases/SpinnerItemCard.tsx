@@ -16,7 +16,7 @@ const SpinnerItemCard: React.FC<SpinnerItemCardProps> = ({ skin, isWinner }) => 
 
     return (
         // The outer div now only provides layout spacing and context.
-        <div className={`w-44 h-44 flex-shrink-0 mx-1 spinner-item ${isWinner ? 'winner' : ''}`}>
+        <div className={`w-52 h-52 flex-shrink-0 mx-1 spinner-item ${isWinner ? 'winner' : ''}`}>
              {/* This inner div is targeted for scaling and filtering to prevent layout shifts. */}
             <div className="inner-card-wrapper w-full h-full">
                 <div className={`relative w-full h-full flex flex-col items-center justify-between p-2 rounded-lg`}>

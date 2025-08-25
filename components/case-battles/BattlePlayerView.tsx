@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { CaseBattleParticipant, Reel } from '../../types';
 import SpinnerReel from '../cases/SpinnerReel';
@@ -7,11 +8,11 @@ import BattleWonSkinCard from './BattleWonSkinCard';
 interface BattlePlayerViewProps {
     participant: CaseBattleParticipant;
     reel: Reel | undefined;
-    isRoundFinished: boolean;
+    isSpinFinished: boolean;
     onSpinComplete: () => void;
 }
 
-const BattlePlayerView: React.FC<BattlePlayerViewProps> = ({ participant, reel, isRoundFinished, onSpinComplete }) => {
+const BattlePlayerView: React.FC<BattlePlayerViewProps> = ({ participant, reel, isSpinFinished, onSpinComplete }) => {
     return (
         <div className="bg-[#0d1a2f]/50 border border-blue-900/50 rounded-lg p-3">
             <div className="flex items-center justify-between mb-3">
@@ -33,7 +34,7 @@ const BattlePlayerView: React.FC<BattlePlayerViewProps> = ({ participant, reel, 
                         items={reel.fullItems}
                         winner={reel.winner}
                         winnerIndex={reel.winnerIndex}
-                        isFinished={isRoundFinished}
+                        isFinished={isSpinFinished}
                         onAnimationComplete={onSpinComplete}
                         animationDelay={0}
                     />

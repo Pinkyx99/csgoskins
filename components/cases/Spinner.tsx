@@ -23,7 +23,7 @@ interface SpinnerButtonProps {
     canAfford: boolean;
 }
 
-const SpinnerContext = createContext<SpinnerContextType | null>(null);
+export const SpinnerContext = createContext<SpinnerContextType | null>(null);
 
 const WinningMarker = () => (
     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-full z-30 pointer-events-none bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] rounded-full">
@@ -36,7 +36,7 @@ export const POST_SPIN_RESULT_MS = 1500;
 const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> } = ({ selectedCase, numToOpen, isSpinning, setIsSpinning, children, onSpinEnd }) => {
     const [reels, setReels] = useState<Reel[]>([]);
     const [finishedReelCount, setFinishedReelCount] = useState(0);
-    const { user, updateBalance, addSkinsToInventory } = useUser();
+    const { user, updateBalance } = useUser();
     
     useEffect(() => {
         const placeholderItems = [...selectedCase.items].sort(() => 0.5 - Math.random()).slice(0, 9);
@@ -55,10 +55,8 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
             
             const winners = reels.map(r => r.winner).filter((w): w is Skin => w !== null);
 
-            const successfulWinnings = await addSkinsToInventory(winners);
-
             setTimeout(() => {
-                onSpinEnd(successfulWinnings);
+                onSpinEnd(winners);
                 setIsSpinning(false);
                 setFinishedReelCount(0);
             }, POST_SPIN_RESULT_MS);
@@ -67,7 +65,7 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
         if (reels.length > 0 && !reels.some(r => r.isPlaceholder) && finishedReelCount === numToOpen && !reels.some(r => r.isFinished)) {
             handleAllReelsFinished();
         }
-    }, [finishedReelCount, numToOpen, addSkinsToInventory, onSpinEnd, setIsSpinning, reels]);
+    }, [finishedReelCount, numToOpen, onSpinEnd, setIsSpinning, reels]);
 
 
     const openCase = (caseItems: Skin[]): Skin => {

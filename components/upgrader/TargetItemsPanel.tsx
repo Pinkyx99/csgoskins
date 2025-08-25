@@ -9,9 +9,10 @@ interface TargetItemsPanelProps {
     selectedSkinId: string | undefined;
     onSelectSkin: (skin: Skin) => void;
     inventorySkinPrice?: number;
+    totalUniqueSkins?: number;
 }
 
-const TargetItemsPanel: React.FC<TargetItemsPanelProps> = ({ skins, selectedSkinId, onSelectSkin }) => {
+const TargetItemsPanel: React.FC<TargetItemsPanelProps> = ({ skins, selectedSkinId, onSelectSkin, totalUniqueSkins }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [fromValue, setFromValue] = useState('');
@@ -34,7 +35,14 @@ const TargetItemsPanel: React.FC<TargetItemsPanelProps> = ({ skins, selectedSkin
     return (
         <div className="bg-[#0d1a2f] p-4 rounded-lg border border-blue-900/50 h-[600px] flex flex-col">
             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white font-semibold text-lg">Items to get</h3>
+                <h3 className="text-white font-semibold text-lg flex items-center gap-2">
+                    Items to get
+                    {totalUniqueSkins && (
+                        <span className="bg-blue-900/50 text-blue-300 text-xs font-semibold px-2 py-0.5 rounded-full">
+                            {totalUniqueSkins.toLocaleString()} Skins
+                        </span>
+                    )}
+                </h3>
                 <button onClick={handleSortToggle} className="bg-[#1a2c47] text-gray-300 px-3 py-1.5 rounded-md text-sm hover:bg-[#253d63]">
                     Price {sortOrder === 'desc' ? '↓' : '↑'}
                 </button>

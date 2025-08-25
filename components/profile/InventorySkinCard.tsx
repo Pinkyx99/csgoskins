@@ -6,9 +6,10 @@ import Button from '../ui/Button';
 interface InventorySkinCardProps {
     skin: Skin;
     onSell: () => void;
+    isSelling?: boolean;
 }
 
-const InventorySkinCard: React.FC<InventorySkinCardProps> = ({ skin, onSell }) => {
+const InventorySkinCard: React.FC<InventorySkinCardProps> = ({ skin, onSell, isSelling }) => {
     const rarityStyle = rarityStyles[skin.rarity] || rarityStyles[SkinRarity.Consumer];
 
     const nameParts = skin.name.split(' | ');
@@ -28,8 +29,13 @@ const InventorySkinCard: React.FC<InventorySkinCardProps> = ({ skin, onSell }) =
                 <p className={`text-xs truncate ${rarityStyle.text}`} title={skinName}>{skinName}</p>
             </div>
             <div className="mt-3">
-                <Button onClick={onSell} variant="secondary" className="w-full !py-1.5 !px-2 text-sm bg-yellow-600 hover:bg-yellow-500 focus:ring-yellow-500">
-                    Sell for ${skin.price.toFixed(2)}
+                <Button 
+                    onClick={onSell} 
+                    disabled={isSelling}
+                    variant="secondary" 
+                    className="w-full !py-1.5 !px-2 text-sm bg-yellow-600 hover:bg-yellow-500 focus:ring-yellow-500 disabled:bg-gray-600"
+                >
+                    {isSelling ? 'Selling...' : `Sell for $${skin.price.toFixed(2)}`}
                 </Button>
             </div>
         </div>

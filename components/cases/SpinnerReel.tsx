@@ -15,7 +15,7 @@ interface SpinnerReelProps {
 
 const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winner, winnerIndex, isFinished, isPlaceholder = false, onAnimationComplete, animationDelay }) => {
     const reelTrackRef = useRef<HTMLDivElement>(null);
-    const [itemWidth, setItemWidth] = useState(184);
+    const [itemWidth, setItemWidth] = useState(216);
     const [targetTransform, setTargetTransform] = useState<string | null>(null);
 
     // Measure the item width once the real items are rendered
@@ -74,7 +74,7 @@ const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winner, winnerIndex, i
     };
     
     return (
-        <div className={`relative w-full h-48 overflow-hidden spin-reel ${isFinished ? 'finished' : ''} ${isPlaceholder ? 'opacity-50' : ''}`}>
+        <div className={`relative w-full h-56 overflow-hidden spin-reel ${isFinished ? 'finished' : ''} ${isPlaceholder ? 'opacity-50' : ''}`}>
              <div 
                 ref={reelTrackRef} 
                 className="reel-track" 

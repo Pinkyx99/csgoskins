@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -65,16 +66,20 @@ const AdminConsole: React.FC<AdminConsoleProps> = ({ onClose }) => {
 
         setIsLoading(true);
         try {
-            const { data, error } = await supabase.rpc('execute_admin_command', {
-                command: trimmedCommand
+            const { data, error } = await supabase.functions.invoke('admin-command', {
+                body: { command: trimmedCommand },
             });
             
             if (error) throw error;
 
-            addLog('success', data);
+            if (data.error) {
+                addLog('error', data.error);
+            } else {
+                addLog('success', data.message);
+            }
 
         } catch (err: any) {
-            addLog('error', err.message);
+            addLog('error', err.message || 'An unexpected error occurred invoking the function.');
         } finally {
             setIsLoading(false);
         }

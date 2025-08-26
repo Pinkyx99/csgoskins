@@ -1,6 +1,6 @@
 
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Skin } from '../../types';
 import UpgraderSkinCard from './UpgraderSkinCard';
 
@@ -12,11 +12,14 @@ interface TargetItemsPanelProps {
     totalUniqueSkins?: number;
 }
 
+const ITEMS_PER_PAGE = 24;
+
 const TargetItemsPanel: React.FC<TargetItemsPanelProps> = ({ skins, selectedSkinId, onSelectSkin, totalUniqueSkins }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [fromValue, setFromValue] = useState('');
     const [toValue, setToValue] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
 
     const filteredAndSortedSkins = useMemo(() => {
         return skins
@@ -25,6 +28,18 @@ const TargetItemsPanel: React.FC<TargetItemsPanelProps> = ({ skins, selectedSkin
         .filter(skin => toValue ? skin.price <= parseFloat(toValue) : true)
         .sort((a, b) => sortOrder === 'desc' ? b.price - a.price : a.price - b.price);
     }, [skins, searchTerm, fromValue, toValue, sortOrder]);
+    
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, fromValue, toValue, sortOrder]);
+
+    const totalPages = Math.ceil(filteredAndSortedSkins.length / ITEMS_PER_PAGE);
+
+    const paginatedSkins = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        const end = start + ITEMS_PER_PAGE;
+        return filteredAndSortedSkins.slice(start, end);
+    }, [currentPage, filteredAndSortedSkins]);
 
      const handleSortToggle = () => {
         setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
@@ -39,7 +54,7 @@ const TargetItemsPanel: React.FC<TargetItemsPanelProps> = ({ skins, selectedSkin
                     Items to get
                     {totalUniqueSkins && (
                         <span className="bg-blue-900/50 text-blue-300 text-xs font-semibold px-2 py-0.5 rounded-full">
-                            {totalUniqueSkins.toLocaleString()} Skins
+                            {filteredAndSortedSkins.length.toLocaleString()} / {totalUniqueSkins.toLocaleString()} Skins
                         </span>
                     )}
                 </h3>
@@ -62,7 +77,7 @@ const TargetItemsPanel: React.FC<TargetItemsPanelProps> = ({ skins, selectedSkin
                 <input type="number" placeholder="To value" value={toValue} onChange={e => setToValue(e.target.value)} className={inputStyles} />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 flex-grow overflow-y-auto pr-2">
-                {filteredAndSortedSkins.map(skin => (
+                {paginatedSkins.map(skin => (
                     <UpgraderSkinCard
                         key={skin.id}
                         skin={skin}
@@ -71,6 +86,25 @@ const TargetItemsPanel: React.FC<TargetItemsPanelProps> = ({ skins, selectedSkin
                     />
                 ))}
             </div>
+            {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-4 flex-shrink-0">
+                    <button 
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                        disabled={currentPage === 1} 
+                        className="px-3 py-1.5 bg-[#1a2c47] rounded-md disabled:opacity-50 text-gray-300 hover:bg-blue-800/50 transition-colors"
+                    >
+                        &lt;
+                    </button>
+                    <span className="text-gray-400 text-sm font-semibold">Page {currentPage} of {totalPages}</span>
+                    <button 
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                        disabled={currentPage === totalPages} 
+                        className="px-3 py-1.5 bg-[#1a2c47] rounded-md disabled:opacity-50 text-gray-300 hover:bg-blue-800/50 transition-colors"
+                    >
+                        &gt;
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

@@ -36,7 +36,7 @@ export const POST_SPIN_RESULT_MS = 1500;
 const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> } = ({ selectedCase, numToOpen, isSpinning, setIsSpinning, children, onSpinEnd }) => {
     const [reels, setReels] = useState<Reel[]>([]);
     const [finishedReelCount, setFinishedReelCount] = useState(0);
-    const { user, updateBalance } = useUser();
+    const { user } = useUser();
     
     useEffect(() => {
         const placeholderItems = [...selectedCase.items].sort(() => 0.5 - Math.random()).slice(0, 9);
@@ -107,8 +107,9 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
     };
 
     const handleOpenCase = useCallback(async () => {
-        if (isSpinning || !user || !selectedCase || user.balance < selectedCase.price * numToOpen) {
-            if (user && selectedCase && user.balance < selectedCase.price * numToOpen) {
+        const totalCost = selectedCase.price * numToOpen;
+        if (isSpinning || !user || !selectedCase || user.balance < totalCost) {
+            if (user && selectedCase && user.balance < totalCost) {
                 alert("Insufficient balance!");
             }
             return;
@@ -116,7 +117,7 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
 
         setIsSpinning(true);
         setFinishedReelCount(0);
-        updateBalance(-selectedCase.price * numToOpen);
+        // The balance update and stat tracking will be handled in CasesPage after the spin result.
 
         const newReels: Reel[] = [];
         
@@ -162,7 +163,7 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
         
         setReels(newReels);
 
-    }, [isSpinning, user, selectedCase, numToOpen, updateBalance, setIsSpinning]);
+    }, [isSpinning, user, selectedCase, numToOpen, setIsSpinning]);
     
     const handleReelAnimationComplete = useCallback(() => {
         setFinishedReelCount(count => count + 1);

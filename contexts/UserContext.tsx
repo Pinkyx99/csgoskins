@@ -11,11 +11,11 @@ interface UserContextType {
     signUpWithUsername: (credentials: {username: string, password: string}) => Promise<AuthResponse>;
     signOut: () => Promise<{ error: AuthError | null; }>;
     updateBalance: (amount: number) => Promise<void>;
-    addSkinToInventory: (skin: Skin) => Promise<Skin | null>;
-    addSkinsToInventory: (skins: Skin[]) => Promise<Skin[]>;
+    addSkinsToInventory: (skins: Skin[], cost: number) => Promise<Skin[]>;
+    processSoldWinnings: (winnings: Skin[], cost: number) => Promise<void>;
     removeSkinFromInventory: (instanceId: string) => Promise<void>;
     removeSkinsFromInventory: (instanceIds: string[]) => Promise<void>;
-    swapSkinsInInventory: (instanceIdsToRemove: string[], skinToAdd: Skin) => Promise<void>;
+    processUpgrade: (instanceIdsToRemove: string[], balanceToSpend: number, skinToAdd: Skin | null) => Promise<void>;
     updateAvatar: (avatarUrl: string) => Promise<void>;
     transferBalance: (recipientUsername: string, amount: number) => Promise<{ error: any }>;
     checkUserStatus: () => Promise<void>;
@@ -25,7 +25,7 @@ interface UserContextType {
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
 
-const userProfileSelect = '*, is_admin, is_banned, ban_expires_at, ban_reason, is_muted, mute_expires_at, mute_reason';
+const userProfileSelect = '*, is_admin, is_banned, ban_expires_at, ban_reason, is_muted, mute_expires_at, mute_reason, best_win, total_wagered, total_won';
 
 const parseInventory = (inventoryData: any): Skin[] => {
     if (Array.isArray(inventoryData)) {
@@ -65,14 +65,29 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .single();
 
         if (error) {
-            console.error("Error checking user status:", error);
+            console.error("Error checking user status:", error.message || error);
             setUser(null);
         } else if (profile) {
              const rawInventory = parseInventory(profile.inventory);
-             const validatedInventory = rawInventory.map((item) => ({
-                 ...item,
-                 instance_id: item.instance_id || crypto.randomUUID()
-             }));
+             
+             let needsDbUpdate = false;
+             const validatedInventory = rawInventory.map((item: Skin) => {
+                 if (!item.instance_id) {
+                     needsDbUpdate = true;
+                     return { ...item, instance_id: crypto.randomUUID() };
+                 }
+                 return item;
+             });
+
+             if (needsDbUpdate) {
+                 const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({ inventory: validatedInventory })
+                    .eq('id', profile.id);
+                if (updateError) {
+                    console.error("Error back-filling instance_ids:", updateError);
+                }
+             }
 
              setUser({
                 id: profile.id,
@@ -87,6 +102,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 is_muted: profile.is_muted,
                 mute_expires_at: profile.mute_expires_at,
                 mute_reason: profile.mute_reason,
+                best_win: profile.best_win || null,
+                total_wagered: profile.total_wagered || 0,
+                total_won: profile.total_won || 0,
             });
         } else {
             setUser(null);
@@ -163,53 +181,94 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
     
-    const addSkinsToInventory = async (skins: Skin[]): Promise<Skin[]> => {
+    const addSkinsToInventory = async (skins: Skin[], cost: number): Promise<Skin[]> => {
         if (!user || skins.length === 0) return [];
     
         const newSkinsWithIds = skins.map(s => ({ ...s, instance_id: crypto.randomUUID() }));
-        
-        // Optimistic UI update
-        setUser(prev => {
-            if (!prev) return null;
-            const existingInventory = parseInventory(prev.inventory);
-            return { ...prev, inventory: [...newSkinsWithIds, ...existingInventory] };
-        });
+        const wonValue = skins.reduce((sum, skin) => sum + skin.price, 0);
         
         // Read-modify-write to DB
         const { data: profile, error: fetchError } = await supabase
             .from('profiles')
-            .select('inventory')
+            .select('inventory, balance, total_wagered, total_won, best_win')
             .eq('id', user.id)
             .single();
 
         if (fetchError) {
-            console.error("Error fetching inventory for adding skins:", fetchError.message || fetchError);
+            console.error("Error fetching profile for adding skins:", fetchError.message || fetchError);
             checkUserStatus();
             return [];
         }
 
         const currentInventory = parseInventory(profile.inventory);
         const newInventory = [...newSkinsWithIds, ...currentInventory];
+        const newBalance = Number(profile.balance) - cost;
+        const newTotalWagered = (Number(profile.total_wagered) || 0) + cost;
+        const newTotalWon = (Number(profile.total_won) || 0) + wonValue;
+
+        let newBestWin = profile.best_win as Skin | null;
+        skins.forEach(skin => {
+            if (!newBestWin || skin.price > newBestWin.price) {
+                newBestWin = { ...skin, instance_id: undefined, wears: undefined };
+            }
+        });
+
+        // Optimistic UI update
+        setUser(prev => prev ? { ...prev, balance: newBalance, inventory: newInventory, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin } : null);
 
         const { error: updateError } = await supabase
             .from('profiles')
-            .update({ inventory: newInventory })
+            .update({ inventory: newInventory, balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin })
             .eq('id', user.id);
     
         if (updateError) {
-            console.error("Error adding skins:", updateError.message || updateError);
+            console.error("Error adding skins and updating stats:", updateError.message || updateError);
             checkUserStatus();
             return [];
         }
         
-        // Success, update local state with confirmed value
-        setUser(prev => prev ? { ...prev, inventory: newInventory } : null);
         return newSkinsWithIds;
     };
 
-    const addSkinToInventory = async (skin: Skin): Promise<Skin | null> => {
-        const result = await addSkinsToInventory([skin]);
-        return result.length > 0 ? result[0] : null;
+    const processSoldWinnings = async (winnings: Skin[], cost: number) => {
+        if (!user) return;
+        
+        const wonValue = winnings.reduce((sum, skin) => sum + skin.price, 0);
+
+        const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('balance, total_wagered, total_won, best_win')
+            .eq('id', user.id)
+            .single();
+
+        if (fetchError) {
+            console.error("Error fetching profile for selling winnings:", fetchError.message || fetchError);
+            checkUserStatus();
+            return;
+        }
+
+        const newBalance = Number(profile.balance) - cost + wonValue;
+        const newTotalWagered = (Number(profile.total_wagered) || 0) + cost;
+        const newTotalWon = (Number(profile.total_won) || 0) + wonValue;
+
+        let newBestWin = profile.best_win as Skin | null;
+        winnings.forEach(skin => {
+            if (!newBestWin || skin.price > newBestWin.price) {
+                newBestWin = { ...skin, instance_id: undefined, wears: undefined };
+            }
+        });
+
+        setUser(prev => prev ? { ...prev, balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin } : null);
+        
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin })
+            .eq('id', user.id);
+        
+        if (updateError) {
+            console.error("Error selling winnings and updating stats:", updateError.message || updateError);
+            checkUserStatus();
+        }
     };
     
      const removeSkinsFromInventory = async (instanceIds: string[]) => {
@@ -257,50 +316,56 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return removeSkinsFromInventory([instanceId]);
     };
 
-    const swapSkinsInInventory = async (instanceIdsToRemove: string[], skinToAdd: Skin) => {
+    const processUpgrade = async (instanceIdsToRemove: string[], balanceToSpend: number, skinToAdd: Skin | null) => {
         if (!user) return;
 
-        const newSkinWithId = { ...skinToAdd, instance_id: crypto.randomUUID() };
-
-        // Optimistic UI update
-        setUser(prev => {
-            if (!prev) return null;
-            const existingInventory = parseInventory(prev.inventory);
-            const inventoryAfterRemoval = existingInventory.filter(s => s.instance_id && !instanceIdsToRemove.includes(s.instance_id));
-            const newInventory = [newSkinWithId, ...inventoryAfterRemoval];
-            return { ...prev, inventory: newInventory };
-        });
-
-        // Read-modify-write to DB
         const { data: profile, error: fetchError } = await supabase
             .from('profiles')
-            .select('inventory')
+            .select('inventory, balance, total_wagered, total_won, best_win')
             .eq('id', user.id)
             .single();
         
         if (fetchError) {
-            console.error("Error fetching inventory for swapping skins:", fetchError.message || fetchError);
+            console.error("Error fetching profile for upgrade:", fetchError.message || fetchError);
             checkUserStatus();
             return;
         }
 
         const currentInventory = parseInventory(profile.inventory);
-        const inventoryAfterRemoval = currentInventory.filter((s: Skin) => s.instance_id && !instanceIdsToRemove.includes(s.instance_id));
-        const newInventory = [newSkinWithId, ...inventoryAfterRemoval];
+        const wageredSkins = currentInventory.filter(s => s.instance_id && instanceIdsToRemove.includes(s.instance_id));
+        const skinsWagerValue = wageredSkins.reduce((sum, s) => sum + s.price, 0);
+        const totalWagerValue = skinsWagerValue + balanceToSpend;
+
+        const newInventory = currentInventory.filter(s => !s.instance_id || !instanceIdsToRemove.includes(s.instance_id));
+        if (skinToAdd) {
+            newInventory.unshift({ ...skinToAdd, instance_id: crypto.randomUUID() });
+        }
+
+        const newBalance = Number(profile.balance) - balanceToSpend;
+        const newTotalWagered = (Number(profile.total_wagered) || 0) + totalWagerValue;
+        let newTotalWon = Number(profile.total_won) || 0;
+        let newBestWin = profile.best_win as Skin | null;
+
+        if (skinToAdd) {
+            newTotalWon += skinToAdd.price;
+            if (!newBestWin || skinToAdd.price > newBestWin.price) {
+                newBestWin = { ...skinToAdd, instance_id: undefined, wears: undefined };
+            }
+        }
+        
+        setUser(prev => prev ? { ...prev, inventory: newInventory, balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin } : null);
 
         const { error: updateError } = await supabase
             .from('profiles')
-            .update({ inventory: newInventory })
+            .update({ inventory: newInventory, balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin })
             .eq('id', user.id);
-
+        
         if (updateError) {
-            console.error("Error swapping skins:", updateError.message || updateError);
-            checkUserStatus(); // Re-sync with DB on failure
-        } else {
-            // Success, confirm the state update.
-            setUser(prev => prev ? { ...prev, inventory: newInventory } : null);
+            console.error("Error processing upgrade:", updateError.message || updateError);
+            checkUserStatus();
         }
     };
+
 
     const updateAvatar = async (avatarUrl: string) => {
         if (!user) return;
@@ -339,11 +404,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signUpWithUsername,
         signOut,
         updateBalance,
-        addSkinToInventory,
         addSkinsToInventory,
+        processSoldWinnings,
         removeSkinFromInventory,
         removeSkinsFromInventory,
-        swapSkinsInInventory,
+        processUpgrade,
         updateAvatar,
         transferBalance,
         checkUserStatus,

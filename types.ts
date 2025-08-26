@@ -58,6 +58,9 @@ export interface User {
     is_muted: boolean;
     mute_expires_at: string | null;
     mute_reason: string | null;
+    best_win: Skin | null;
+    total_wagered: number;
+    total_won: number;
 }
 
 export interface ChatMessage {
@@ -73,6 +76,12 @@ export interface PublicProfile {
     id: string;
     username: string;
     avatar_url: string;
+}
+
+export interface FullPublicProfile extends PublicProfile {
+    best_win: Skin | null;
+    total_wagered: number;
+    total_won: number;
 }
 
 export interface Transaction {
@@ -121,6 +130,7 @@ export interface CaseBattle {
     created_by_username: string;
     cases: Case[];
     max_players: number;
+    // FIX: Add 'starting' status to CaseBattle type to resolve comparison errors.
     status: 'waiting' | 'starting' | 'in_progress' | 'finished';
     winner_id?: string;
     participants: CaseBattleParticipant[];

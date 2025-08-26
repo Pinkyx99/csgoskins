@@ -20,7 +20,7 @@ const CasesPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const caseId = searchParams.get('case');
-    const { user, updateBalance, addSkinsToInventory, setAuthModalOpen } = useUser();
+    const { user, addSkinsToInventory, processSoldWinnings, setAuthModalOpen } = useUser();
     
     const [numToOpen, setNumToOpen] = useState(1);
     const [isSpinning, setIsSpinning] = useState(false);
@@ -29,6 +29,9 @@ const CasesPage: React.FC = () => {
     const [dailyCaseCooldown, setDailyCaseCooldown] = useState(0);
     const DAILY_CASE_ID = 'c4';
     const DAILY_CASE_COOLDOWN_SECONDS = 60;
+
+    const [search, setSearch] = useState('');
+    const [price, setPrice] = useState(400);
 
     const selectedCase = useMemo(() => MOCK_CASES.find(c => c.id === caseId), [caseId]);
     const isDailyCase = selectedCase?.id === DAILY_CASE_ID;
@@ -56,19 +59,48 @@ const CasesPage: React.FC = () => {
         }
     }, [isDailyCase, dailyCaseCooldown]);
     
-    const handleSellWinnings = (totalValue: number) => {
-        if(user) {
-            updateBalance(totalValue);
-            setWinnings([]); // Close modal
-        }
+    const handleSpinEnd = (wonSkins: Skin[]) => {
+        setWinnings(wonSkins);
     };
 
-    const handleKeepWinnings = () => {
-        if(user && winnings.length > 0) {
-            addSkinsToInventory(winnings);
+    const handleSellWinnings = async () => {
+        if (user && winnings.length > 0 && selectedCase) {
+            await processSoldWinnings(winnings, selectedCase.price * effectiveNumToOpen);
         }
         setWinnings([]); // Close modal
     };
+
+    const handleKeepWinnings = async () => {
+        if (user && winnings.length > 0 && selectedCase) {
+            await addSkinsToInventory(winnings, selectedCase.price * effectiveNumToOpen);
+        }
+        setWinnings([]); // Close modal
+    };
+
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newPrice = Number(e.target.value);
+        setPrice(newPrice);
+        const target = e.target as HTMLElement;
+        const progress = (newPrice / 400) * 100;
+        target.style.setProperty('--range-progress', `${progress}%`);
+    };
+
+    const handleClearFilters = () => {
+        setSearch('');
+        setPrice(400);
+        const rangeInput = document.querySelector('input[type=range].cases-page-slider');
+        if (rangeInput) {
+            (rangeInput as HTMLElement).style.setProperty('--range-progress', '100%');
+        }
+    };
+
+    const filteredCases = useMemo(() => {
+        return MOCK_CASES.filter(c => {
+            const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
+            const matchesPrice = c.price <= price;
+            return matchesSearch && matchesPrice;
+        });
+    }, [search, price]);
 
     // Button component specifically for the daily case
     const DailyCaseButton = () => {
@@ -132,7 +164,7 @@ const CasesPage: React.FC = () => {
                         numToOpen={effectiveNumToOpen}
                         isSpinning={isSpinning}
                         setIsSpinning={setIsSpinning}
-                        onSpinEnd={setWinnings}
+                        onSpinEnd={handleSpinEnd}
                     >
                         <div className="flex flex-col items-center gap-4 my-8">
                             {!isDailyCase && (
@@ -186,8 +218,19 @@ const CasesPage: React.FC = () => {
     return (
         <div className="container mx-auto px-4 py-8 fade-in-up">
             <h1 className="text-4xl font-bold mb-8 text-center">All Cases</h1>
+            <div className="bg-[#12233f] border border-blue-900/50 rounded-lg p-4 mb-8 flex flex-col md:flex-row items-center gap-4">
+                <div className="relative w-full md:w-2/5">
+                    <input type="text" placeholder="Search case by name..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-[#0d1a2f] border border-blue-800/50 rounded-md py-2.5 pl-4 pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>
+                </div>
+                <div className="w-full md:w-2/5 flex items-center gap-4">
+                    <input type="range" min="0" max="400" value={price} onChange={handlePriceChange} className="w-full cases-page-slider" />
+                    <span className="text-white font-semibold w-24 text-right">{price.toFixed(2)}€</span>
+                </div>
+                <button onClick={handleClearFilters} className="text-gray-400 hover:text-white transition-colors hover:bg-blue-800/20 px-3 py-1.5 rounded-md flex-shrink-0">Clear filters</button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {MOCK_CASES.map(caseItem => (
+                {filteredCases.map(caseItem => (
                     <CaseCard key={caseItem.id} caseItem={caseItem} onClick={() => navigate(`/cases?case=${caseItem.id}`)} />
                 ))}
             </div>

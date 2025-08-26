@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Skin } from '../types';
 import { useUser } from '../hooks/useUser';
@@ -105,7 +103,7 @@ const SelectedItemsGrid = ({ skins }: { skins: Skin[] }) => {
 };
 
 const UpgraderPage: React.FC = () => {
-    const { user, removeSkinsFromInventory, swapSkinsInInventory, updateBalance } = useUser();
+    const { user, processUpgrade } = useUser();
     
     const [selectedInventorySkins, setSelectedInventorySkins] = useState<Skin[]>([]);
     const [selectedTargetSkin, setSelectedTargetSkin] = useState<Skin | null>(null);
@@ -125,7 +123,7 @@ const UpgraderPage: React.FC = () => {
     useEffect(() => {
         if (totalInputValue > 0 && selectedTargetSkin) {
             if (selectedTargetSkin.price > totalInputValue) {
-                const chance = (totalInputValue / selectedTargetSkin.price) * 90; // Chance logic
+                const chance = (totalInputValue / selectedTargetSkin.price) * 95; // Chance logic
                 setUpgradeChance(Math.min(chance, 95));
             } else {
                 setUpgradeChance(0);
@@ -162,17 +160,11 @@ const UpgraderPage: React.FC = () => {
         setIsUpgrading(true);
         setUpgradeResult(result);
 
-        if (balanceToAdd > 0) {
-            await updateBalance(-balanceToAdd);
-        }
+        const instanceIds = selectedInventorySkins.map(s => s.instance_id!);
+        const skinToAddOnWin = result === 'win' ? selectedTargetSkin : null;
 
         setTimeout(async () => {
-            const instanceIds = selectedInventorySkins.map(s => s.instance_id!);
-            if (result === 'win') {
-                await swapSkinsInInventory(instanceIds, selectedTargetSkin);
-            } else {
-                await removeSkinsFromInventory(instanceIds);
-            }
+            await processUpgrade(instanceIds, balanceToAdd, skinToAddOnWin);
             setIsUpgrading(false);
 
             setTimeout(() => {

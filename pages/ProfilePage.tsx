@@ -6,6 +6,16 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Skin, Transaction } from '../types';
 import InventorySkinCard from '../components/profile/InventorySkinCard';
+import { rarityStyles } from '../constants';
+import { SkinRarity } from '../types';
+
+const StatCard = ({ label, value }: { label: string, value: string | number}) => (
+    <div className="bg-[#0d1a2f] p-4 rounded-lg text-center border border-blue-900/50">
+        <p className="text-sm text-gray-400">{label}</p>
+        <p className="text-2xl font-bold text-white">{value}</p>
+    </div>
+);
+
 
 const ProfilePage: React.FC = () => {
     const { user, updateAvatar, removeSkinFromInventory, updateBalance } = useUser();
@@ -98,13 +108,35 @@ const ProfilePage: React.FC = () => {
         </div>
     );
 
+    const BestSkinCard = ({ skin }: { skin: Skin }) => {
+        const rarityStyle = rarityStyles[skin.rarity] || rarityStyles[SkinRarity.Consumer];
+        const nameParts = skin.name.split(' | ');
+        const weaponName = nameParts[0];
+        const skinName = nameParts.length > 1 ? nameParts.slice(1).join(' | ') : '';
+        return (
+            <div className={`bg-gradient-to-b from-[#1a2c47] to-[#12233f] p-4 rounded-lg text-center border-t-4 ${rarityStyle.border}`}>
+                 <p className="text-sm text-gray-400 mb-4">Best Item Drop</p>
+                 <div className="h-32 flex items-center justify-center">
+                    <img src={skin.image} alt={skin.name} className="max-h-28 object-contain drop-shadow-lg" />
+                 </div>
+                 <div className="mt-2 h-10 flex flex-col justify-center">
+                    <p className="text-white text-base font-medium truncate" title={weaponName}>{weaponName}</p>
+                    <p className={`text-sm truncate ${rarityStyle.text}`} title={skinName}>{skinName}</p>
+                 </div>
+                 <div className="mt-2 text-center">
+                    <p className="text-lg font-semibold text-green-400">${skin.price.toFixed(2)}</p>
+                 </div>
+            </div>
+        );
+    };
+
     return (
         <div className="container mx-auto px-4 py-6 fade-in-up">
             <ProfileNav />
             {activeTab === 'profile' ? (
                 <>
-                    <div className="bg-[#12233f] border border-blue-900/50 rounded-lg p-6 mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="flex items-start gap-4">
+                    <div className="bg-[#12233f] border border-blue-900/50 rounded-lg p-6 mb-6 flex flex-col md:flex-row items-start gap-6">
+                        <div className="flex items-start gap-4 flex-shrink-0">
                             <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
                                 <img src={user.avatar} alt={user.name} className="w-20 h-20 rounded-md object-cover"/>
                                 <div className="absolute inset-0 bg-black/50 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -119,36 +151,34 @@ const ProfilePage: React.FC = () => {
                             <div>
                                 <h2 className="text-2xl font-bold text-white">{user.name}</h2>
                                 <div className="flex items-center gap-2 mt-2">
-                                <div className="bg-[#0d1a2f] text-sm text-gray-300 px-3 py-1 rounded-md">ID: {user.id.substring(0, 8)}...</div>
-                                <button className="bg-[#0d1a2f] text-sm text-gray-300 px-3 py-1 rounded-md hover:bg-blue-800/50">Profile</button>
-                                </div>
-                                <div className="flex items-center gap-2 mt-3">
                                 <div className="bg-green-500/10 border border-green-500/30 text-green-300 px-3 py-1.5 rounded-md flex items-center gap-2">
                                     <span>{user.balance.toFixed(2)}€</span>
                                     <button className="bg-green-500/20 w-6 h-6 rounded-sm">+</button>
                                 </div>
-                                    <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 px-3 py-1.5 rounded-md flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.25.75a.75.75 0 0 1 .75.75v.005l.007.005.014.01.028.018a3.7 3.7 0 0 1 .455.263c.1.07.2.148.3.235l.024.022.013.012.006.005a.75.75 0 0 1-1.06 1.06l-.005-.006-.012-.013-.022-.024a2.2 2.2 0 0 0-.235-.3c-.07-.1-.148-.2-.235-.3a3.7 3.7 0 0 1-.263-.455l-.018-.028-.01-.014-.005-.007A.75.75 0 0 1 11.25.75zM4.75.75a.75.75 0 0 0-.75.75v.005l-.007.005-.014.01-.028.018a3.7 3.7 0 0 0-.455.263c-.1.07-.2.148-.3.235l-.024.022-.013.012-.006.005a.75.75 0 0 0 1.06 1.06l.005-.006.012-.013.022-.024c.078-.087.156-.163.235-.235.07-.1.148-.2.235-.3a3.7 3.7 0 0 0 .263-.455l.018-.028.01-.014.005-.007A.75.75 0 0 0 4.75.75zm.124 10.325a.75.75 0 0 1 1.06 0l.005.006.012.013.022.024c.078.087.156.163.235.235.07.1.148.2.235.3.116.14.239.27.368.392l.003.002.005.004.01.007.014.009.022.012.043.02.045.017.05.015.055.013.06.01.064.007.05.003h.001L8 14.5l2.126-.001.05-.003.064-.007.06-.01.055-.013.05-.015.045-.017.043-.2.022-.012.014-.009.01-.007.005-.004.003-.002c.129-.122.252-.252.368-.392.1-.07.2-.148.3-.235l.024-.022.013-.012.006-.005a.75.75 0 1 1 1.06 1.06l-.005.006-.012.013-.022.024a2.2 2.2 0 0 1-.235.3c-.07.1-.148.2-.235.3a3.7 3.7 0 0 1-.263.455l-.018.028-.01.014-.005.007a.75.75 0 0 1-1.5 0l.005-.007.01-.014.018-.028a3.7 3.7 0 0 0 .263-.455c.1-.07.2-.148.3-.235l.024-.022.013-.012.006-.005a.75.75 0 0 1 0-1.06zm6.152-7.11a.75.75 0 0 0-1.06 0l-.005.006-.012.013-.022.024c-.078.087-.156.163-.235.235-.07.1-.148.2-.235.3a3.7 3.7 0 0 0-.263.455l-.018.028-.01.014-.005.007a.75.75 0 0 0 1.5 0l-.005-.007-.01-.014-.018-.028a3.7 3.7 0 0 1-.263-.455c-.1-.07-.2-.148-.3-.235l-.024-.022-.013-.012-.006-.005a.75.75 0 0 0 1.06-1.06zM8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1z"/></svg>
-                                        <span>0</span>
-                                </div>
+                                <div className="bg-[#0d1a2f] text-sm text-gray-300 px-3 py-1 rounded-md">ID: {user.id.substring(0, 8)}...</div>
                                 </div>
                             </div>
                         </div>
-                        <div>
-                            <div className="flex justify-between items-center mb-1">
-                                <label className="text-white font-semibold">Trade URL:</label>
-                                <a href="#" className="text-xs text-blue-400 hover:underline">How to get it?</a>
-                            </div>
-                            <div className="flex gap-2">
-                                <input type="text" placeholder="https://steamcommunity.com/tradeoffer/..." className="w-full bg-[#0d1a2f] border border-blue-800/50 rounded-md py-2 px-3 text-white placeholder-gray-500"/>
-                                <button className="bg-blue-600 text-white font-semibold px-4 rounded-md hover:bg-blue-500">Save</button>
+                        <div className="w-full flex-grow">
+                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <StatCard label="Total Wagered" value={`${user.total_wagered.toFixed(2)}€`} />
+                                <StatCard label="Total Won" value={`${user.total_won.toFixed(2)}€`} />
+                                {user.best_win ? (
+                                    <BestSkinCard skin={user.best_win} />
+                                ) : (
+                                    <div className="bg-[#0d1a2f] p-4 rounded-lg text-center border border-blue-900/50 flex flex-col justify-center items-center">
+                                         <p className="text-sm text-gray-400">Best Item Drop</p>
+                                         <p className="text-gray-500 mt-4">No drops yet!</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        {error && <p className="text-red-400 text-sm mt-2 md:col-span-2">{error}</p>}
+                        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
                     </div>
                     <div className="bg-[#12233f] border border-blue-900/50 rounded-lg p-6">
+                        <h3 className="text-xl font-bold mb-4">Inventory ({user.inventory.length} items)</h3>
                         {user.inventory.length > 0 ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                                 {user.inventory.map(skin => (
                                     <InventorySkinCard 
                                         key={skin.instance_id} 
@@ -202,12 +232,6 @@ const ProfilePage: React.FC = () => {
                     )}
                 </div>
             )}
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mt-8">
-                <div className="bg-[#12233f] p-4 rounded-lg"><p className="text-2xl font-bold">4,866,252</p><p className="text-sm text-gray-400">Players</p></div>
-                <div className="bg-[#12233f] p-4 rounded-lg"><p className="text-2xl font-bold">10,283</p><p className="text-sm text-gray-400">Online</p></div>
-                <div className="bg-[#12233f] p-4 rounded-lg"><p className="text-2xl font-bold">157,778,321</p><p className="text-sm text-gray-400">Opened cases</p></div>
-                <div className="bg-[#12233f] p-4 rounded-lg"><p className="text-2xl font-bold">since 2015</p><p className="text-sm text-gray-400">in the case opening</p></div>
-            </div>
         </div>
     );
 };

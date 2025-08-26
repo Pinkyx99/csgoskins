@@ -1,17 +1,47 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useUser } from '../hooks/useUser';
-import { PublicProfile } from '../types';
+import { FullPublicProfile, Skin, SkinRarity } from '../types';
 import Button from '../components/ui/Button';
+import { rarityStyles } from '../constants';
+
+const StatCard = ({ label, value }: { label: string, value: string | number}) => (
+    <div className="bg-[#0d1a2f] p-4 rounded-lg text-center border border-blue-900/50">
+        <p className="text-sm text-gray-400">{label}</p>
+        <p className="text-xl font-bold text-white">{value}</p>
+    </div>
+);
+
+const BestSkinCard = ({ skin }: { skin: Skin }) => {
+    const rarityStyle = rarityStyles[skin.rarity] || rarityStyles[SkinRarity.Consumer];
+    const nameParts = skin.name.split(' | ');
+    const weaponName = nameParts[0];
+    const skinName = nameParts.length > 1 ? nameParts.slice(1).join(' | ') : '';
+    return (
+        <div className={`bg-gradient-to-b from-[#1a2c47] to-[#12233f] p-4 rounded-lg text-center border-t-4 ${rarityStyle.border}`}>
+             <p className="text-sm text-gray-400 mb-4">Best Item Drop</p>
+             <div className="h-24 flex items-center justify-center">
+                <img src={skin.image} alt={skin.name} className="max-h-20 object-contain drop-shadow-lg" />
+             </div>
+             <div className="mt-2 h-10 flex flex-col justify-center">
+                <p className="text-white text-base font-medium truncate" title={weaponName}>{weaponName}</p>
+                <p className={`text-sm truncate ${rarityStyle.text}`} title={skinName}>{skinName}</p>
+             </div>
+             <div className="mt-2 text-center">
+                <p className="text-lg font-semibold text-green-400">${skin.price.toFixed(2)}</p>
+             </div>
+        </div>
+    );
+};
+
 
 const PublicProfilePage: React.FC = () => {
     const { username } = useParams<{ username: string }>();
     const navigate = useNavigate();
     const { user: currentUser, transferBalance, setAuthModalOpen } = useUser();
     
-    const [profile, setProfile] = useState<PublicProfile | null>(null);
+    const [profile, setProfile] = useState<FullPublicProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -30,14 +60,14 @@ const PublicProfilePage: React.FC = () => {
             setLoading(true);
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, username, avatar_url')
+                .select('id, username, avatar_url, best_win, total_wagered, total_won')
                 .eq('username', username)
                 .single();
             
             if (error || !data) {
                 setError('User not found.');
             } else {
-                setProfile(data);
+                setProfile(data as FullPublicProfile);
             }
             setLoading(false);
         };
@@ -89,21 +119,36 @@ const PublicProfilePage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <div className="max-w-md mx-auto bg-[#12233f] border border-blue-900/50 rounded-lg p-8 text-center">
-                <img 
-                    src={profile.avatar_url || `https://api.dicebear.com/8.x/bottts/svg?seed=${profile.username}`}
-                    alt={profile.username}
-                    className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-blue-800/50"
-                />
-                <h1 className="text-3xl font-bold text-white">{profile.username}</h1>
-                <p className="text-gray-500 text-sm mt-1">ID: {profile.id.substring(0,12)}...</p>
+            <div className="max-w-2xl mx-auto bg-[#12233f] border border-blue-900/50 rounded-lg p-8">
+                <div className="text-center">
+                    <img 
+                        src={profile.avatar_url || `https://api.dicebear.com/8.x/bottts/svg?seed=${profile.username}`}
+                        alt={profile.username}
+                        className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-blue-800/50"
+                    />
+                    <h1 className="text-3xl font-bold text-white">{profile.username}</h1>
+                    <p className="text-gray-500 text-sm mt-1">ID: {profile.id.substring(0,12)}...</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
+                    <StatCard label="Total Wagered" value={`${(profile.total_wagered || 0).toFixed(2)}€`} />
+                    <StatCard label="Total Won" value={`${(profile.total_won || 0).toFixed(2)}€`} />
+                    {profile.best_win ? (
+                        <BestSkinCard skin={profile.best_win} />
+                    ) : (
+                        <div className="bg-[#0d1a2f] p-4 rounded-lg text-center border border-blue-900/50 flex flex-col justify-center items-center">
+                             <p className="text-sm text-gray-400">Best Item Drop</p>
+                             <p className="text-gray-500 mt-4">No drops yet!</p>
+                        </div>
+                    )}
+                </div>
 
                 {isOwnProfile ? (
-                     <Button onClick={() => navigate('/profile')} className="mt-6">View My Profile</Button>
+                     <div className="text-center"><Button onClick={() => navigate('/profile')}>View My Profile</Button></div>
                 ) : (
                     <div className="mt-6 bg-slate-900/50 p-4 rounded-lg">
-                        <h3 className="font-semibold text-lg mb-3">Send Balance</h3>
-                        <div className="flex gap-2">
+                        <h3 className="font-semibold text-lg mb-3 text-center">Send Balance</h3>
+                        <div className="flex gap-2 max-w-sm mx-auto">
                              <input
                                 type="number"
                                 value={paymentAmount}
@@ -117,7 +162,7 @@ const PublicProfilePage: React.FC = () => {
                             </Button>
                         </div>
                         {paymentStatus && (
-                            <p className={`text-sm mt-3 ${paymentStatus.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                            <p className={`text-sm mt-3 text-center ${paymentStatus.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
                                 {paymentStatus.message}
                             </p>
                         )}

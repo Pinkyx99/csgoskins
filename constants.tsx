@@ -147,12 +147,11 @@ export const BOT_NAMES = [
 ];
 
 export const Logo = () => (
-    <Link to="/" className="flex items-center text-3xl font-black tracking-tight text-white no-underline">
-        <span>CSG</span>
-        <div className="relative inline-block w-6 h-6 mx-0.5" title="CSGOSKINS">
-            <div className="w-full h-full bg-blue-500 rounded-full"></div>
-            <div className="absolute top-1/2 left-1/2 w-2 h-2 -translate-x-1/2 -translate-y-1/2 bg-orange-500 rounded-full"></div>
+    <Link to="/" className="flex items-center text-3xl font-black tracking-tight text-white no-underline group" title="SkArena">
+        <div className="relative w-8 h-9 mr-2 flex items-center justify-center transition-transform group-hover:scale-110" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}>
+            <div className="absolute inset-0 bg-blue-500 group-hover:bg-orange-500 transition-colors duration-300"></div>
+            <span className="relative z-10 text-white font-bold text-xl">A</span>
         </div>
-        <span>SKINS</span>
+        <span className="text-blue-400 transition-colors duration-300 group-hover:text-white">Sk</span><span className="text-white transition-colors duration-300 group-hover:text-orange-400">Arena</span>
     </Link>
 );

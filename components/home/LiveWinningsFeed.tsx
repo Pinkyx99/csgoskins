@@ -12,7 +12,7 @@ const LiveWinningsFeed: React.FC = () => {
                         <span className='font-bold text-sm'>LIVE</span>
                     </div>
                 </div>
-                {MOCK_WINNINGS.map((winning) => (
+                {[...MOCK_WINNINGS].reverse().map((winning) => (
                     <div key={winning.id} className="flex-shrink-0 bg-[#1a1c3c] rounded-md p-2 flex items-center gap-3 w-60 live-winning-card cursor-pointer">
                          <div className="w-16 h-12 flex items-center justify-center bg-black/20 rounded-md">
                             <img src={winning.skin.image} alt={winning.skin.name} className="max-h-full max-w-full object-contain" />

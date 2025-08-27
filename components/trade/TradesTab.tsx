@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../hooks/useUser';
-// FIX: Cannot find name 'FullPublicProfile'. Did you mean 'PublicProfile'?
-import { TradeOffer, Skin, PublicProfile, FullPublicProfile } from '../../types';
+import { TradeOffer, Skin, FullPublicProfile } from '../../types';
 import TradeOfferCard from './TradeOfferCard';
 import { useTradeNotifications } from '../../hooks/useTradeNotifications';
 
@@ -39,8 +38,7 @@ const TradesTab: React.FC = () => {
 
         const { data: profiles, error: profileError } = await supabase
             .from('profiles')
-            // FIX: Select all fields for FullPublicProfile to ensure type-safety.
-            .select('id, username, avatar_url, inventory, best_win, total_wagered, total_won')
+            .select('*')
             .in('id', Array.from(userIds));
 
         if (profileError) {

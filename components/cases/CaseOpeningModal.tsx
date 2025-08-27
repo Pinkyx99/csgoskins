@@ -6,9 +6,10 @@ import Button from '../ui/Button';
 // --- Sub-component for a single winning item ---
 interface WinningItemCardProps {
     skin: Skin;
+    animationDelay: string;
 }
 
-const WinningItemCard: React.FC<WinningItemCardProps> = ({ skin }) => {
+const WinningItemCard: React.FC<WinningItemCardProps> = ({ skin, animationDelay }) => {
     const rarityStyle = rarityStyles[skin.rarity] || rarityStyles[SkinRarity.Consumer];
 
     const nameParts = skin.name.split(' | ');
@@ -16,7 +17,10 @@ const WinningItemCard: React.FC<WinningItemCardProps> = ({ skin }) => {
     const skinName = nameParts.length > 1 ? nameParts.slice(1).join(' | ') : '';
 
     return (
-        <div className={`relative bg-gradient-to-b from-[#1a2c47] to-[#12233f] rounded-lg p-3 text-center transition-transform transform hover:-translate-y-1 group border-t-2 ${rarityStyle.border}`}>
+        <div 
+            className={`relative bg-gradient-to-b from-[#1a2c47] to-[#12233f] rounded-lg p-3 text-center transition-transform transform hover:-translate-y-1 group border-t-2 ${rarityStyle.border} fade-in-up`}
+            style={{ animationDelay }}
+        >
             <div className={`absolute -top-px left-0 right-0 h-1 ${rarityStyle.bg} opacity-50 blur-md group-hover:opacity-80 transition-opacity`}></div>
             
             <div className="h-24 flex items-center justify-center">
@@ -51,9 +55,9 @@ const CaseOpeningModal: React.FC<CaseOpeningModalProps> = ({ winnings, onClose, 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4 fade-in-up">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in">
             <div 
-                className="bg-[#12233f] border border-blue-900/50 rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col"
+                className="bg-[#12233f] border border-blue-900/50 rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 <div className="p-4 border-b border-blue-900/50 flex justify-between items-center flex-shrink-0">
@@ -64,7 +68,11 @@ const CaseOpeningModal: React.FC<CaseOpeningModalProps> = ({ winnings, onClose, 
                 <div className="p-6 flex-grow overflow-y-auto">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {winnings.map((skin, index) => (
-                            <WinningItemCard key={`${skin.id}-${index}`} skin={skin} />
+                            <WinningItemCard 
+                                key={`${skin.id}-${index}`} 
+                                skin={skin} 
+                                animationDelay={`${index * 100}ms`}
+                            />
                         ))}
                     </div>
                 </div>

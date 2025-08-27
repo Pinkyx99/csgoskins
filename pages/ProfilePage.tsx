@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { useUser } from '../hooks/useUser';
 import { useNavigate } from 'react-router-dom';
@@ -224,7 +225,6 @@ const ProfilePage: React.FC = () => {
                                                 <td className="px-4 py-3 text-gray-300">{new Date(t.created_at).toLocaleString()}</td>
                                                 <td className={`px-4 py-3 font-semibold ${isSender ? 'text-red-400' : 'text-green-400'}`}>{isSender ? 'Sent' : 'Received'}</td>
                                                 <td className="px-4 py-3 text-white">{isSender ? t.recipient_username : t.sender_username}</td>
-                                                {/* FIX: JSX bug in amount rendering */}
                                                 <td className={`px-4 py-3 text-right font-semibold ${isSender ? 'text-red-400' : 'text-green-400'}`}>{isSender ? '-' : '+'}{t.amount.toFixed(2)}€</td>
                                             </tr>
                                         );
@@ -240,5 +240,4 @@ const ProfilePage: React.FC = () => {
     );
 };
 
-// FIX: Change to default export
 export default ProfilePage;

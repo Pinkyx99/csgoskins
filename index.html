@@ -3,62 +3,69 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CSGOSkins Simulator</title>
+    <title>SKskins</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
       
       :root {
-        --glow-color-blue: rgba(59, 130, 246, 0.5);
-        --glow-color-green: rgba(74, 222, 128, 0.6);
-        --glow-color-orange: rgba(249, 115, 22, 0.5);
+        --color-bg: #111827;
+        --color-bg-light: #1f2937;
+        --color-bg-darker: #0c101b;
+        --color-primary: #3b82f6;
+        --color-primary-light: #60a5fa;
+        --color-secondary: #f97316;
+        --color-accent: #10b981;
+        --color-text: #e5e7eb;
+        --color-text-muted: #9ca3af;
+        --color-border: #374151;
+        --border-radius: 0.5rem;
       }
 
       *, *::before, *::after {
         box-sizing: border-box;
       }
-      
+
+      @keyframes bg-pan {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
       body {
-        background-color: #0d1a2f;
-        background-image: 
-          radial-gradient(circle at 25% 25%, rgba(13, 37, 85, 0.3) 0%, transparent 40%),
-          radial-gradient(circle at 75% 75%, rgba(13, 85, 50, 0.15) 0%, transparent 40%);
-        color: white;
+        background-color: var(--color-bg);
+        background-image: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
+                          radial-gradient(circle at 90% 80%, rgba(249, 115, 22, 0.08) 0%, transparent 50%);
+        background-size: 200% 200%;
+        animation: bg-pan 30s linear infinite;
+        color: var(--color-text);
         font-family: 'Inter', sans-serif;
         overflow-x: hidden;
       }
-      
-      /* Refined Scrollbar */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
       }
       ::-webkit-scrollbar-track {
-        background: #0d1a2f;
+        background: var(--color-bg-darker);
       }
       ::-webkit-scrollbar-thumb {
-        background: #1e3a5f;
-        border-radius: 4px;
-        border: 2px solid #0d1a2f;
+        background: var(--color-border);
+        border-radius: 5px;
+        border: 2px solid var(--color-bg-darker);
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #2b528a;
+        background: var(--color-primary-light);
       }
 
-      /* --- KEYFRAMES --- */
+      /* Page Load Animations */
       .fade-in-up {
         opacity: 0;
-        animation: fadeInUp 0.6s ease-out forwards;
+        animation: fadeInUp 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
       }
       @keyframes fadeInUp {
-          from {
-              opacity: 0;
-              transform: translateY(20px);
-          }
-          to {
-              opacity: 1;
-              transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(25px); }
+          to { opacity: 1; transform: translateY(0); }
       }
       .animation-delay-100 { animation-delay: 100ms; }
       .animation-delay-200 { animation-delay: 200ms; }
@@ -70,43 +77,33 @@
 
       @keyframes simpleFadeIn { from { opacity: 0; } to { opacity: 1; } }
       .animate-fade-in { animation: simpleFadeIn 0.3s ease-out forwards; }
+      
+      @keyframes scale-in {
+        from { transform: scale(0.95); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+      .animate-scale-in {
+        animation: scale-in 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      }
+      
+      /* Price Change Animation */
+      @keyframes price-change-pop {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.15) translateY(-2px); }
+        100% { transform: scale(1) translateY(0); }
+      }
+      .animate-price-pop {
+        animation: price-change-pop 0.3s ease-out;
+      }
 
-      @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+      /* Loot Reveal Animations */
+      @keyframes pulse-win {
+        0%, 100% { box-shadow: 0 0 10px rgba(74, 222, 128, 0.5), inset 0 0 8px rgba(74, 222, 128, 0.3); }
+        50% { box-shadow: 0 0 24px rgba(74, 222, 128, 1), inset 0 0 12px rgba(74, 222, 128, 0.5); }
       }
-       @keyframes shine {
-        to { left: 150%; }
-      }
-      @keyframes gradient-pan {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      @keyframes count-up-anim {
-        from { content: '$0.00'; }
-      }
-      
-      /* --- Base Card Styles --- */
-      .card-base {
-        background: radial-gradient(circle at 100% 100%, #1a2c47, #12233f);
-        border: 1px solid #1e3a5f;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-      }
-      .card-base:hover {
-        border-color: #3b82f6;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-      }
-      
-      /* Live Feed Marquee */
-      .marquee-track {
-        display: flex;
-        animation: marquee 60s linear infinite;
-        will-change: transform;
-      }
-      .marquee-container:hover .marquee-track {
-        animation-play-state: paused;
-      }
+      .animate-pulse-win { animation: pulse-win 1.5s ease-in-out infinite; }
+
+      @keyframes shine { to { left: 100%; } }
 
       /* Spinner animation enhancements */
       .reel-track {
@@ -118,229 +115,6 @@
         will-change: transform;
       }
       .spin-reel.finished .spinner-item:not(.winner) .inner-card-wrapper {
-        transition: filter 0.4s ease-out, transform 0.4s ease-out, opacity 0.4s ease-out;
-        filter: blur(4px) grayscale(1) brightness(0.5);
-        transform: scale(0.9);
-        opacity: 0.6;
-      }
-      .spinner-item.winner {
-        z-index: 10;
-      }
-      .winner .inner-card-wrapper {
-        animation: winner-pop 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-      }
-      @keyframes winner-pop {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1.05); }
-      }
-      .winner .shine-effect {
-        content: "";
-        position: absolute; top: 0; left: -150%;
-        width: 100%; height: 100%;
-        background: linear-gradient(100deg, rgba(255, 255, 255, 0) 20%, rgba(255, 255, 255, 0.3) 50%, rgba(255, 255, 255, 0) 80%);
-        animation: shine 1.5s ease-in-out forwards;
-        z-index: 20; border-radius: 0.5rem;
-      }
-      
-      /* Custom range slider styles */
-      input[type=range] {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 100%;
-        background: transparent;
-      }
-      input[type=range]:focus {
-        outline: none;
-      }
-      input[type=range]::-webkit-slider-runnable-track {
-        width: 100%;
-        height: 6px;
-        cursor: pointer;
-        background: linear-gradient(to right, #2563eb var(--range-progress, 0%), #1e293b 0%);
-        border-radius: 3px;
-      }
-      input[type=range]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        height: 18px;
-        width: 18px;
-        border-radius: 50%;
-        background: #60a5fa;
-        cursor: pointer;
-        margin-top: -6px;
-        border: 2px solid #1e293b;
-        transition: transform 0.2s ease;
-      }
-       input[type=range]:active::-webkit-slider-thumb {
-        transform: scale(1.2);
-      }
-      input[type=range]::-moz-range-track {
-        width: 100%;
-        height: 6px;
-        cursor: pointer;
-        background: linear-gradient(to right, #2563eb var(--range-progress, 0%), #1e293b 0%);
-        border-radius: 3px;
-      }
-      input[type=range]::-moz-range-thumb {
-        height: 18px;
-        width: 18px;
-        border-radius: 50%;
-        background: #60a5fa;
-        cursor: pointer;
-        border: 2px solid #1e293b;
-      }
-      
-      .form-checkbox {
-        transition: all 0.2s ease-in-out;
-        position: relative;
-        -webkit-appearance: none;
-        appearance: none;
-        background-color: #1e293b;
-        border: 1px solid #334155;
-      }
-      .form-checkbox:checked {
-        background-color: #3b82f6;
-        border-color: #60a5fa;
-      }
-      .form-checkbox:checked::after {
-        content: '✔';
-        position: absolute;
-        color: white;
-        font-size: 12px;
-        line-height: 1;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        animation: checkbox-pop 0.3s ease-out;
-      }
-      @keyframes checkbox-pop {
-        0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
-        50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
-        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-      }
-
-      @keyframes pulse-win {
-        0%, 100% {
-          filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.7));
-        }
-        50% {
-          filter: drop-shadow(0 0 15px rgba(74, 222, 128, 1));
-        }
-      }
-      .animate-pulse-win {
-        animation: pulse-win 1.5s ease-in-out infinite;
-      }
-
-      @keyframes price-change-pop {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.15) translateY(-2px); }
-        100% { transform: scale(1) translateY(0); }
-      }
-      .animate-price-pop {
-        animation: price-change-pop 0.3s ease-out;
-      }
-      
-      /* MINES */
-      .mines-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0.75rem;
-      }
-      .mine-tile {
-        aspect-ratio: 1 / 1;
-        border-radius: 0.5rem;
-        cursor: pointer;
-        transition: transform 0.2s ease;
-        will-change: transform;
-        perspective: 1000px;
-      }
-      .mine-tile.revealed { cursor: default; }
-      .mine-tile:not(.revealed):hover {
-        transform: translateY(-4px) scale(1.05);
-      }
-      .mine-tile-inner {
-        position: relative;
-        width: 100%;
-        height: 100%;
-        transition: transform 0.6s;
-        transform-style: preserve-3d;
-      }
-      .mine-tile.revealed .mine-tile-inner {
-        transform: rotateY(180deg);
-      }
-      .mine-tile-front, .mine-tile-back {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        -webkit-backface-visibility: hidden;
-        backface-visibility: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 0.5rem;
-      }
-      .mine-tile-front {
-        background: radial-gradient(circle at 50% 50%, #293859, #1e293b);
-        border: 1px solid #2b3a5c;
-      }
-      .mine-tile-back { transform: rotateY(180deg); }
-      .tile-gem { background-image: linear-gradient(45deg, #10b981, #34d399); }
-      .tile-mine { background-image: linear-gradient(45deg, #ef4444, #f87171); }
-      @keyframes mine-explosion {
-        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
-      }
-      .mine-busted { animation: mine-explosion 0.5s ease-out; }
-
-      /* COINFLIP */
-      .coin-container { perspective: 1000px; }
-      .coin {
-        width: 150px;
-        height: 150px;
-        position: relative;
-        transform-style: preserve-3d;
-        transition: transform 3s cubic-bezier(0.25, 1, 0.5, 1);
-      }
-      .coin-face {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        backface-visibility: hidden;
-        -webkit-backface-visibility: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background-size: 80%;
-        background-repeat: no-repeat;
-        background-position: center;
-      }
-      .coin-t {
-        background-color: #f97316;
-        background-image: url('https://i.imgur.com/L40049G.png');
-      }
-      .coin-ct {
-        background-color: #3b82f6;
-        background-image: url('https://i.imgur.com/56h3P57.png');
-        transform: rotateY(180deg);
-      }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.1.1/",
-    "react": "https://esm.sh/react@^19.1.1",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.8.2",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
-<body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-</body>
-</html>
+        transition: filter 0.4s ease-out, transform 0.4s ease-out;
+        filter: grayscale<link rel="stylesheet" href="/index.css">
+<script type="module" src="/index.tsx"></script>

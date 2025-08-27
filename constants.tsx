@@ -180,7 +180,6 @@ export const JESTER_MODE_DATA: { [caseId: string]: { price: number } } = {
     'c48': { price: 5284.75 },
 };
 
-// FIX: Add MINES_MULTIPLIERS constant.
 // Multipliers for the Mines game. Key is the number of mines, value is an array of multipliers for each gem picked.
 // MINES_MULTIPLIERS[minesCount][gemsPicked - 1]
 export const MINES_MULTIPLIERS: { [key: number]: number[] } = {
@@ -228,11 +227,11 @@ export const BOT_NAMES = [
 ];
 
 export const Logo = () => (
-    <Link to="/" className="flex items-center text-3xl font-black tracking-tight text-white no-underline group" title="SkArena">
-        <div className="relative w-8 h-9 mr-2 flex items-center justify-center transition-transform group-hover:scale-110" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}>
-            <div className="absolute inset-0 bg-blue-500 group-hover:bg-orange-500 transition-colors duration-300"></div>
-            <span className="relative z-10 text-white font-bold text-xl">A</span>
+    <Link to="/" className="flex items-center text-3xl font-black tracking-tighter text-white no-underline group" title="SKskins">
+        <div className="relative w-8 h-9 mr-2 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 transition-all duration-300 group-hover:from-orange-500 group-hover:to-orange-400" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}></div>
+            <span className="relative z-10 text-white font-bold text-xl">S</span>
         </div>
-        <span className="text-blue-400 transition-colors duration-300 group-hover:text-white">Sk</span><span className="text-white transition-colors duration-300 group-hover:text-orange-400">Arena</span>
+        <span className="text-blue-400 transition-colors duration-300 group-hover:text-white">SK</span><span className="text-white transition-colors duration-300 group-hover:text-orange-400">skins</span>
     </Link>
 );

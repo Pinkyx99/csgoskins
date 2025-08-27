@@ -131,7 +131,6 @@ export interface CaseBattle {
     created_by_username: string;
     cases: Case[];
     max_players: number;
-    // FIX: Add 'starting' status to CaseBattle type to resolve comparison errors.
     status: 'waiting' | 'starting' | 'in_progress' | 'finished';
     winner_id?: string;
     participants: CaseBattleParticipant[];

@@ -1,3 +1,5 @@
+
+
 import React, { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/layout/Header';
@@ -41,6 +43,7 @@ const App: React.FC = () => {
     
     const isPermanentlyBanned = user?.is_banned && user.ban_expires_at === null;
 
+
     if (isBanned || isPermanentlyBanned) {
         return <BannedScreen />;
     }
@@ -49,25 +52,25 @@ const App: React.FC = () => {
         <HashRouter>
             <div className="min-h-screen bg-[#0d1a2f] text-white">
                 <Header onAdminConsoleOpen={() => setIsAdminConsoleOpen(true)} />
-
                 <AnnouncementBanner />
                 <ChatPanel />
-
-                <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/cases" element={<CasesPage />} />
-                    <Route path="/upgrader" element={<UpgraderPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/leaderboard" element={<LeaderboardPage />} />
-                    <Route path="/profile/:id" element={<PublicProfilePage />} />
-                    <Route path="/case-battles" element={<CaseBattlesPage />} />
-                    <Route path="/case-battles/:id" element={<CaseBattleRoomPage />} />
-                    <Route path="/games" element={<GamesPage />} />
-                    <Route path="/games/mines" element={<MinesPage />} />
-                    <Route path="/games/coinflip" element={<CoinflipPage />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-
+                <main>
+                    <Routes>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/cases" element={<CasesPage />} />
+                        <Route path="/upgrader" element={<UpgraderPage />} />
+                        <Route path="/case-battles" element={<CaseBattlesPage />} />
+                        <Route path="/case-battles/:battleId" element={<CaseBattleRoomPage />} />
+                        <Route path="/games" element={<GamesPage />} />
+                        <Route path="/games/mines" element={<MinesPage />} />
+                        <Route path="/games/coinflip" element={<CoinflipPage />} />
+                        <Route path="/leaderboard" element={<LeaderboardPage />} />
+                        <Route path="/exchanger" element={<PlaceholderPage title="Exchanger" />} />
+                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="/user/:username" element={<PublicProfilePage />} />
+                        <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
+                </main>
                 {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
                 {isAdminConsoleOpen && <AdminConsole onClose={() => setIsAdminConsoleOpen(false)} />}
             </div>

@@ -125,13 +125,13 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [checkUserStatus]);
 
     const signInWithUsername = (credentials: {username: string, password: string}) => {
-        const email = `${credentials.username.trim().toLowerCase()}@csgoskins.app`;
+        const email = `${credentials.username.trim().toLowerCase()}@skskins.app`;
         return supabase.auth.signInWithPassword({ email, password: credentials.password });
     };
 
     const signUpWithUsername = (credentials: {username: string, password: string}) => {
         const username = credentials.username.trim();
-        const email = `${username.toLowerCase()}@csgoskins.app`;
+        const email = `${username.toLowerCase()}@skskins.app`;
         return supabase.auth.signUp({
             email,
             password: credentials.password,
@@ -248,10 +248,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        const newBalance = Number(profile.balance) - cost + wonValue;
+        const newBalance = (Number(profile.balance) || 0) - cost + wonValue;
         const newTotalWagered = (Number(profile.total_wagered) || 0) + cost;
         const newTotalWon = (Number(profile.total_won) || 0) + wonValue;
-
+        
         let newBestWin = profile.best_win as Skin | null;
         winnings.forEach(skin => {
             if (!newBestWin || skin.price > newBestWin.price) {
@@ -259,62 +259,53 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         });
 
+        // Optimistic UI update
         setUser(prev => prev ? { ...prev, balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin } : null);
-        
+
         const { error: updateError } = await supabase
             .from('profiles')
             .update({ balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin })
             .eq('id', user.id);
-        
-        if (updateError) {
-            console.error("Error selling winnings and updating stats:", updateError.message || updateError);
-            checkUserStatus();
-        }
-    };
     
-     const removeSkinsFromInventory = async (instanceIds: string[]) => {
-        if (!user || instanceIds.length === 0) return;
-
-        // Optimistic UI update
-        setUser(prev => {
-            if (!prev) return null;
-            const existingInventory = parseInventory(prev.inventory);
-            const newInventory = existingInventory.filter(s => s.instance_id && !instanceIds.includes(s.instance_id));
-            return { ...prev, inventory: newInventory };
-        });
-
-        // Read-modify-write to DB
-        const { data: profile, error: fetchError } = await supabase
-            .from('profiles')
-            .select('inventory')
-            .eq('id', user.id)
-            .single();
-        
-        if (fetchError) {
-            console.error("Error fetching inventory for removing skins:", fetchError.message || fetchError);
-            checkUserStatus();
-            return;
-        }
-
-        const currentInventory = parseInventory(profile.inventory);
-        const newInventory = currentInventory.filter((s: Skin) => s.instance_id && !instanceIds.includes(s.instance_id));
-
-        const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ inventory: newInventory })
-            .eq('id', user.id);
-
         if (updateError) {
-            console.error("Error removing skins:", updateError.message || updateError);
+            console.error("Error updating stats after selling:", updateError.message || updateError);
             checkUserStatus();
-        } else {
-            // Success, update local state with confirmed value
-            setUser(prev => prev ? { ...prev, inventory: newInventory } : null);
         }
     };
 
     const removeSkinFromInventory = async (instanceId: string) => {
-        return removeSkinsFromInventory([instanceId]);
+        if (!user) return;
+        
+        const newInventory = user.inventory.filter(s => s.instance_id !== instanceId);
+        setUser(prev => prev ? { ...prev, inventory: newInventory } : null);
+
+        const { error } = await supabase
+            .from('profiles')
+            .update({ inventory: newInventory })
+            .eq('id', user.id);
+            
+        if (error) {
+            console.error('Error removing skin from inventory:', error);
+            checkUserStatus();
+        }
+    };
+
+    const removeSkinsFromInventory = async (instanceIds: string[]) => {
+        if (!user) return;
+        if (instanceIds.length === 0) return;
+
+        const newInventory = user.inventory.filter(s => !instanceIds.includes(s.instance_id!));
+        setUser(prev => prev ? { ...prev, inventory: newInventory } : null);
+
+        const { error } = await supabase
+            .from('profiles')
+            .update({ inventory: newInventory })
+            .eq('id', user.id);
+
+        if (error) {
+            console.error('Error removing skins from inventory:', error);
+            checkUserStatus();
+        }
     };
 
     const processUpgrade = async (instanceIdsToRemove: string[], balanceToSpend: number, skinToAdd: Skin | null) => {
@@ -325,126 +316,132 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .select('inventory, balance, total_wagered, total_won, best_win')
             .eq('id', user.id)
             .single();
-        
+
         if (fetchError) {
             console.error("Error fetching profile for upgrade:", fetchError.message || fetchError);
-            checkUserStatus();
+            checkUserStatus(); // Re-sync with DB
             return;
         }
 
         const currentInventory = parseInventory(profile.inventory);
-        const wageredSkins = currentInventory.filter(s => s.instance_id && instanceIdsToRemove.includes(s.instance_id));
-        const skinsWagerValue = wageredSkins.reduce((sum, s) => sum + s.price, 0);
-        const totalWagerValue = skinsWagerValue + balanceToSpend;
+        const skinsToRemove = currentInventory.filter(s => instanceIdsToRemove.includes(s.instance_id!));
+        const valueOfSkinsToRemove = skinsToRemove.reduce((sum, skin) => sum + skin.price, 0);
+        
+        const wagerAmount = valueOfSkinsToRemove + balanceToSpend;
 
-        const newInventory = currentInventory.filter(s => !s.instance_id || !instanceIdsToRemove.includes(s.instance_id));
-        if (skinToAdd) {
-            newInventory.unshift({ ...skinToAdd, instance_id: crypto.randomUUID() });
-        }
-
-        const newBalance = Number(profile.balance) - balanceToSpend;
-        const newTotalWagered = (Number(profile.total_wagered) || 0) + totalWagerValue;
-        let newTotalWon = Number(profile.total_won) || 0;
+        let newInventory = currentInventory.filter(s => !instanceIdsToRemove.includes(s.instance_id!));
+        let winAmount = 0;
         let newBestWin = profile.best_win as Skin | null;
 
-        if (skinToAdd) {
-            newTotalWon += skinToAdd.price;
+        if (skinToAdd) { // It's a win
+            const newSkinWithId = { ...skinToAdd, instance_id: crypto.randomUUID(), wears: undefined }; // remove wears from inventory items
+            newInventory.unshift(newSkinWithId); // add to front
+            winAmount = skinToAdd.price;
             if (!newBestWin || skinToAdd.price > newBestWin.price) {
                 newBestWin = { ...skinToAdd, instance_id: undefined, wears: undefined };
             }
         }
+
+        const newBalance = Number(profile.balance) - balanceToSpend;
+        const newTotalWagered = (Number(profile.total_wagered) || 0) + wagerAmount;
+        const newTotalWon = (Number(profile.total_won) || 0) + winAmount;
         
-        setUser(prev => prev ? { ...prev, inventory: newInventory, balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin } : null);
+        setUser(prev => prev ? {
+            ...prev,
+            inventory: newInventory,
+            balance: newBalance,
+            total_wagered: newTotalWagered,
+            total_won: newTotalWon,
+            best_win: newBestWin,
+        } : null);
 
         const { error: updateError } = await supabase
             .from('profiles')
-            .update({ inventory: newInventory, balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin })
+            .update({
+                inventory: newInventory,
+                balance: newBalance,
+                total_wagered: newTotalWagered,
+                total_won: newTotalWon,
+                best_win: newBestWin,
+            })
             .eq('id', user.id);
         
         if (updateError) {
             console.error("Error processing upgrade:", updateError.message || updateError);
-            checkUserStatus();
+            checkUserStatus(); // Re-sync
         }
     };
 
-    const processGameWager = async (betAmount: number, winAmount: number) => {
-        if (!user) return { success: false, error: { message: "User not logged in" }};
+    const updateAvatar = async (avatarUrl: string) => {
+        if (!user) return;
         
-        const profit = winAmount - betAmount;
-        const netBalanceChange = profit;
+        setUser(prev => prev ? { ...prev, avatar: avatarUrl } : null);
 
+        const { error } = await supabase
+            .from('profiles')
+            .update({ avatar_url: avatarUrl })
+            .eq('id', user.id);
+        
+        if (error) {
+            console.error("Error updating avatar:", error);
+            checkUserStatus();
+        }
+    };
+    
+    const transferBalance = async (recipientUsername: string, amount: number) => {
+        if (!user || user.name === recipientUsername) {
+            return { error: { message: 'Cannot transfer to yourself.' } };
+        }
+        
+        // Use an RPC call for atomic transaction
+        const { error } = await supabase.rpc('transfer_balance', {
+            p_recipient_username: recipientUsername,
+            p_transfer_amount: amount,
+        });
+
+        if (error) {
+            console.error("Error transferring balance:", error);
+            checkUserStatus();
+            return { error };
+        }
+        
+        checkUserStatus();
+        return { error: null };
+    };
+
+    const processGameWager = async (betAmount: number, winAmount: number): Promise<{ success: boolean; error?: any }> => {
+        if (!user) return { success: false, error: 'User not logged in' };
+        
         const { data: profile, error: fetchError } = await supabase
             .from('profiles')
-            .select('balance, total_wagered, total_won, best_win')
+            .select('balance, total_wagered, total_won')
             .eq('id', user.id)
             .single();
-        
+
         if (fetchError) {
-            console.error("Error fetching profile for wager:", fetchError.message);
+            console.error("Error fetching profile for game wager:", fetchError.message || fetchError);
             checkUserStatus();
             return { success: false, error: fetchError };
         }
 
-        const newBalance = Number(profile.balance) + netBalanceChange;
+        const newBalance = Number(profile.balance) + winAmount;
         const newTotalWagered = (Number(profile.total_wagered) || 0) + betAmount;
         const newTotalWon = (Number(profile.total_won) || 0) + winAmount;
-
-        let newBestWin = profile.best_win as Skin | null;
-        if (profit > 0 && (!newBestWin || profit > newBestWin.price)) {
-            newBestWin = {
-                id: `win-${Date.now()}`,
-                name: `Minigame Win`,
-                rarity: SkinRarity.Covert,
-                image: 'https://i.imgur.com/8kO4s2x.png',
-                price: profit,
-                chance: 0,
-            };
-        }
         
-        setUser(prev => prev ? { ...prev, balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin } : null);
-
+        setUser(prev => prev ? { ...prev, balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon } : null);
+        
         const { error: updateError } = await supabase
             .from('profiles')
-            .update({ balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin })
+            .update({ balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon })
             .eq('id', user.id);
-        
+            
         if (updateError) {
-            console.error("Error processing wager:", updateError.message);
+            console.error("Error processing game wager:", updateError.message || updateError);
             checkUserStatus();
             return { success: false, error: updateError };
         }
-
+        
         return { success: true };
-    };
-
-
-    const updateAvatar = async (avatarUrl: string) => {
-        if (!user) return;
-        const oldAvatar = user.avatar;
-        setUser({ ...user, avatar: avatarUrl });
-        const { error } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', user.id);
-        if (error) {
-            console.error("Error updating avatar:", error.message || error);
-            setUser({ ...user, avatar: oldAvatar });
-        }
-    };
-
-    const transferBalance = async (recipientUsername: string, amount: number) => {
-        if (!user || user.balance < amount || amount <= 0) {
-            return { error: { message: "Invalid amount or insufficient balance." } };
-        }
-
-        const { error } = await supabase.rpc('transfer_balance', {
-            recipient_username_arg: recipientUsername,
-            amount_arg: amount
-        });
-
-        if (!error) {
-            // The RPC function handles the deduction, so we just need to update local state
-            await checkUserStatus();
-        }
-
-        return { error };
     };
 
     const value = {
@@ -468,15 +465,5 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         processGameWager,
     };
 
-    return (
-        <UserContext.Provider value={value}>
-            {loading ? (
-                <div className="fixed inset-0 flex items-center justify-center bg-[#0d1a2f] z-[200]">
-                    <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-            ) : (
-                children
-            )}
-        </UserContext.Provider>
-    );
+    return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };

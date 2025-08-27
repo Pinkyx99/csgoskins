@@ -5,6 +5,7 @@ import { useUser } from '../hooks/useUser';
 import { FullPublicProfile, Skin, SkinRarity } from '../types';
 import Button from '../components/ui/Button';
 import { rarityStyles } from '../constants';
+import TradeModal from '../components/trade/TradeModal';
 
 const StatCard = ({ label, value }: { label: string, value: string | number}) => (
     <div className="bg-[#0d1a2f] p-4 rounded-lg text-center border border-blue-900/50">
@@ -44,6 +45,7 @@ const PublicProfilePage: React.FC = () => {
     const [profile, setProfile] = useState<FullPublicProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
 
     const [paymentAmount, setPaymentAmount] = useState('');
     const [isPaying, setIsPaying] = useState(false);
@@ -60,7 +62,7 @@ const PublicProfilePage: React.FC = () => {
             setLoading(true);
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, username, avatar_url, best_win, total_wagered, total_won')
+                .select('id, username, avatar_url, inventory, best_win, total_wagered, total_won')
                 .eq('username', username)
                 .single();
             
@@ -118,58 +120,71 @@ const PublicProfilePage: React.FC = () => {
     const isOwnProfile = currentUser?.id === profile.id;
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="max-w-2xl mx-auto bg-[#12233f] border border-blue-900/50 rounded-lg p-8">
-                <div className="text-center">
-                    <img 
-                        src={profile.avatar_url || `https://api.dicebear.com/8.x/bottts/svg?seed=${profile.username}`}
-                        alt={profile.username}
-                        className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-blue-800/50"
-                    />
-                    <h1 className="text-3xl font-bold text-white">{profile.username}</h1>
-                    <p className="text-gray-500 text-sm mt-1">ID: {profile.id.substring(0,12)}...</p>
-                </div>
+        <>
+            <div className="container mx-auto px-4 py-8">
+                <div className="max-w-2xl mx-auto bg-[#12233f] border border-blue-900/50 rounded-lg p-8">
+                    <div className="text-center">
+                        <img 
+                            src={profile.avatar_url || `https://api.dicebear.com/8.x/bottts/svg?seed=${profile.username}`}
+                            alt={profile.username}
+                            className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-blue-800/50"
+                        />
+                        <h1 className="text-3xl font-bold text-white">{profile.username}</h1>
+                        <p className="text-gray-500 text-sm mt-1">ID: {profile.id.substring(0,12)}...</p>
+                    </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
-                    <StatCard label="Total Wagered" value={`${(profile.total_wagered || 0).toFixed(2)}€`} />
-                    <StatCard label="Total Won" value={`${(profile.total_won || 0).toFixed(2)}€`} />
-                    {profile.best_win ? (
-                        <BestSkinCard skin={profile.best_win} />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
+                        <StatCard label="Total Wagered" value={`${(profile.total_wagered || 0).toFixed(2)}€`} />
+                        <StatCard label="Total Won" value={`${(profile.total_won || 0).toFixed(2)}€`} />
+                        {profile.best_win ? (
+                            <BestSkinCard skin={profile.best_win} />
+                        ) : (
+                            <div className="bg-[#0d1a2f] p-4 rounded-lg text-center border border-blue-900/50 flex flex-col justify-center items-center">
+                                <p className="text-sm text-gray-400">Best Item Drop</p>
+                                <p className="text-gray-500 mt-4">No drops yet!</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {isOwnProfile ? (
+                        <div className="text-center"><Button onClick={() => navigate('/profile')}>View My Profile</Button></div>
                     ) : (
-                        <div className="bg-[#0d1a2f] p-4 rounded-lg text-center border border-blue-900/50 flex flex-col justify-center items-center">
-                             <p className="text-sm text-gray-400">Best Item Drop</p>
-                             <p className="text-gray-500 mt-4">No drops yet!</p>
+                        <div className="flex items-center justify-center gap-4">
+                            <Button variant="secondary" onClick={() => setIsTradeModalOpen(true)}>
+                                Trade with {profile.username}
+                            </Button>
+                            <div className="mt-6 bg-slate-900/50 p-4 rounded-lg">
+                                <h3 className="font-semibold text-lg mb-3 text-center">Send Balance</h3>
+                                <div className="flex gap-2 max-w-sm mx-auto">
+                                    <input
+                                        type="number"
+                                        value={paymentAmount}
+                                        onChange={(e) => setPaymentAmount(e.target.value)}
+                                        placeholder="Amount in €"
+                                        disabled={isPaying}
+                                        className="w-full bg-[#0d1a2f] border border-blue-800/50 rounded-md py-2 px-3 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                    <Button onClick={handlePayment} disabled={isPaying}>
+                                        {isPaying ? 'Sending...' : 'Pay'}
+                                    </Button>
+                                </div>
+                                {paymentStatus && (
+                                    <p className={`text-sm mt-3 text-center ${paymentStatus.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                                        {paymentStatus.message}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
-
-                {isOwnProfile ? (
-                     <div className="text-center"><Button onClick={() => navigate('/profile')}>View My Profile</Button></div>
-                ) : (
-                    <div className="mt-6 bg-slate-900/50 p-4 rounded-lg">
-                        <h3 className="font-semibold text-lg mb-3 text-center">Send Balance</h3>
-                        <div className="flex gap-2 max-w-sm mx-auto">
-                             <input
-                                type="number"
-                                value={paymentAmount}
-                                onChange={(e) => setPaymentAmount(e.target.value)}
-                                placeholder="Amount in €"
-                                disabled={isPaying}
-                                className="w-full bg-[#0d1a2f] border border-blue-800/50 rounded-md py-2 px-3 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                            <Button onClick={handlePayment} disabled={isPaying}>
-                                {isPaying ? 'Sending...' : 'Pay'}
-                            </Button>
-                        </div>
-                        {paymentStatus && (
-                            <p className={`text-sm mt-3 text-center ${paymentStatus.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-                                {paymentStatus.message}
-                            </p>
-                        )}
-                    </div>
-                )}
             </div>
-        </div>
+            {isTradeModalOpen && currentUser && (
+                <TradeModal 
+                    targetUser={profile}
+                    onClose={() => setIsTradeModalOpen(false)}
+                />
+            )}
+        </>
     );
 };
 

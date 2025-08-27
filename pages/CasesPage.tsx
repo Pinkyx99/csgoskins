@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { MOCK_CASES } from '../constants';
+import { MOCK_CASES, JESTER_MODE_DATA } from '../constants';
 import CaseCard from '../components/ui/CaseCard';
 import { useUser } from '../hooks/useUser';
 import CaseItemCard from '../components/cases/CaseItemCard';
@@ -8,11 +8,23 @@ import Spinner, { SpinnerContext } from '../components/cases/Spinner';
 import CaseOpeningModal from '../components/cases/CaseOpeningModal';
 import { Skin } from '../types';
 import Button from '../components/ui/Button';
+import { getBalancedCaseItems } from '../lib/caseOdds';
 
 const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400 hover:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>;
-const ActionIcon = ({ children }: { children: React.ReactNode }) => (
-    <div className="w-12 h-12 bg-[#1a2c47] rounded-md flex items-center justify-center cursor-pointer text-gray-400 hover:text-white hover:bg-blue-800/50 transition-colors">
-        {children}
+const CrownIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.25278C12 6.25278 15.1111 3 17.5556 3C18.0051 3 18.4545 3.17714 18.8082 3.50429C19.1619 3.83143 19.3519 4.28571 19.3519 4.75714V10.2429C19.3519 10.7143 19.1619 11.1686 18.8082 11.5C18.4545 11.8271 18.0051 12 17.5556 12C15.1111 12 12 9.07436 12 9.07436M12 6.25278C12 6.25278 8.88889 3 6.44444 3C5.99494 3 5.54553 3.17714 5.1918 3.50429C4.83807 3.83143 4.64815 4.28571 4.64815 4.75714V10.2429C4.64815 10.7143 4.83807 11.1686 5.1918 11.5C5.54553 11.8271 5.99494 12 6.44444 12C8.88889 12 12 9.07436 12 9.07436M12 9.07436V21M3 21H21" /></svg>;
+
+const ActionIcon: React.FC<{ children: React.ReactNode; title?: string; onClick?: () => void; disabled?: boolean; isActive?: boolean }> = ({ children, title, onClick, disabled, isActive }) => (
+    <div
+      title={title}
+      onClick={!disabled ? onClick : undefined}
+      className={`relative w-12 h-12 flex items-center justify-center rounded-md transition-all duration-300 text-gray-400 ${
+        disabled
+          ? 'bg-[#1a2c47] opacity-50 cursor-not-allowed'
+          : `cursor-pointer hover:text-white hover:bg-blue-800/50 ${isActive ? 'text-purple-300 bg-purple-800/50' : 'bg-[#1a2c47]'}`
+      }`}
+    >
+      {children}
+      {isActive && !disabled && <div className="absolute inset-0 border-2 border-purple-400 rounded-md"></div>}
     </div>
 );
 
@@ -25,6 +37,7 @@ const CasesPage: React.FC = () => {
     const [numToOpen, setNumToOpen] = useState(1);
     const [isSpinning, setIsSpinning] = useState(false);
     const [winnings, setWinnings] = useState<Skin[]>([]);
+    const [isJesterMode, setIsJesterMode] = useState(false);
 
     const [dailyCaseCooldown, setDailyCaseCooldown] = useState(0);
     const DAILY_CASE_ID = 'c4';
@@ -34,10 +47,21 @@ const CasesPage: React.FC = () => {
     const [price, setPrice] = useState(400);
 
     const selectedCase = useMemo(() => MOCK_CASES.find(c => c.id === caseId), [caseId]);
-    const isDailyCase = selectedCase?.id === DAILY_CASE_ID;
+    const balancedItems = useMemo(() => selectedCase ? getBalancedCaseItems(selectedCase.items) : [], [selectedCase]);
+    const jesterData = useMemo(() => selectedCase ? JESTER_MODE_DATA[selectedCase.id] : null, [selectedCase]);
+    const jesterChance = useMemo(() => selectedCase ? 100 / selectedCase.items.length : 0, [selectedCase]);
+
+    useEffect(() => {
+        // Disable jester mode if case doesn't support it
+        if (!jesterData) {
+            setIsJesterMode(false);
+        }
+    }, [jesterData]);
     
-    // For daily case, we always open 1. For others, we use the state.
+    const currentPrice = isJesterMode && jesterData ? jesterData.price : (selectedCase?.price ?? 0);
+    const isDailyCase = selectedCase?.id === DAILY_CASE_ID;
     const effectiveNumToOpen = isDailyCase ? 1 : numToOpen;
+    const totalPrice = currentPrice * effectiveNumToOpen;
 
     useEffect(() => {
         if (isDailyCase) {
@@ -65,14 +89,14 @@ const CasesPage: React.FC = () => {
 
     const handleSellWinnings = async () => {
         if (user && winnings.length > 0 && selectedCase) {
-            await processSoldWinnings(winnings, selectedCase.price * effectiveNumToOpen);
+            await processSoldWinnings(winnings, totalPrice);
         }
         setWinnings([]); // Close modal
     };
 
     const handleKeepWinnings = async () => {
         if (user && winnings.length > 0 && selectedCase) {
-            await addSkinsToInventory(winnings, selectedCase.price * effectiveNumToOpen);
+            await addSkinsToInventory(winnings, totalPrice);
         }
         setWinnings([]); // Close modal
     };
@@ -102,7 +126,6 @@ const CasesPage: React.FC = () => {
         });
     }, [search, price]);
 
-    // Button component specifically for the daily case
     const DailyCaseButton = () => {
         const context = useContext(SpinnerContext);
         if (!context) return null;
@@ -141,7 +164,7 @@ const CasesPage: React.FC = () => {
 
 
     if (selectedCase) {
-        const canAfford = user && user.balance >= selectedCase.price * numToOpen;
+        const canAfford = user && user.balance >= totalPrice;
 
         return (
             <>
@@ -156,15 +179,17 @@ const CasesPage: React.FC = () => {
                             <HeartIcon />
                             {selectedCase.name}
                         </h1>
-                        <p className="text-green-400 text-lg mt-1">${selectedCase.price.toFixed(2)}</p>
+                        <p key={currentPrice} className={`animate-price-pop text-lg mt-1 transition-colors duration-300 ${isJesterMode ? 'text-purple-400' : 'text-green-400'}`}>${currentPrice.toFixed(2)}</p>
                     </div>
 
                     <Spinner
                         selectedCase={selectedCase}
+                        balancedItems={balancedItems}
                         numToOpen={effectiveNumToOpen}
                         isSpinning={isSpinning}
                         setIsSpinning={setIsSpinning}
                         onSpinEnd={handleSpinEnd}
+                        isJesterMode={isJesterMode && !!jesterData}
                     >
                         <div className="flex flex-col items-center gap-4 my-8">
                             {!isDailyCase && (
@@ -186,7 +211,9 @@ const CasesPage: React.FC = () => {
                             </div>
                         
                             <div className="flex gap-2">
-                                <ActionIcon><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg></ActionIcon>
+                                <ActionIcon title={jesterData ? "Jester Mode: Equal odds for every item" : "Jester Mode not available for this case"} onClick={() => jesterData && setIsJesterMode(!isJesterMode)} disabled={!jesterData} isActive={isJesterMode}>
+                                    <CrownIcon />
+                                </ActionIcon>
                                 <ActionIcon><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg></ActionIcon>
                                 <ActionIcon><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></ActionIcon>
                                 <ActionIcon><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg></ActionIcon>
@@ -197,8 +224,13 @@ const CasesPage: React.FC = () => {
                     <div className="mt-16">
                         <h2 className="text-2xl font-semibold mb-6 text-center">Case contents</h2>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                            {[...selectedCase.items].sort((a, b) => b.price - a.price).map(item => (
-                                <CaseItemCard key={item.id} skin={item} />
+                            {balancedItems.sort((a, b) => b.price - a.price).map(item => (
+                                <CaseItemCard 
+                                    key={item.id} 
+                                    skin={item} 
+                                    isJesterMode={isJesterMode && !!jesterData}
+                                    jesterChance={isJesterMode && !!jesterData ? jesterChance : undefined}
+                                />
                             ))}
                         </div>
                     </div>

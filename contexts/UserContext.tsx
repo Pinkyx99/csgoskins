@@ -1,5 +1,5 @@
 import React, { createContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { User, Skin } from '../types';
+import { User, Skin, SkinRarity } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { Session, AuthError, AuthResponse } from '@supabase/supabase-js';
 
@@ -21,6 +21,7 @@ interface UserContextType {
     checkUserStatus: () => Promise<void>;
     authModalOpen: boolean;
     setAuthModalOpen: (open: boolean) => void;
+    processGameWager: (betAmount: number, winAmount: number) => Promise<{ success: boolean; error?: any }>;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -366,6 +367,56 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const processGameWager = async (betAmount: number, winAmount: number) => {
+        if (!user) return { success: false, error: { message: "User not logged in" }};
+        
+        const profit = winAmount - betAmount;
+        const netBalanceChange = profit;
+
+        const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('balance, total_wagered, total_won, best_win')
+            .eq('id', user.id)
+            .single();
+        
+        if (fetchError) {
+            console.error("Error fetching profile for wager:", fetchError.message);
+            checkUserStatus();
+            return { success: false, error: fetchError };
+        }
+
+        const newBalance = Number(profile.balance) + netBalanceChange;
+        const newTotalWagered = (Number(profile.total_wagered) || 0) + betAmount;
+        const newTotalWon = (Number(profile.total_won) || 0) + winAmount;
+
+        let newBestWin = profile.best_win as Skin | null;
+        if (profit > 0 && (!newBestWin || profit > newBestWin.price)) {
+            newBestWin = {
+                id: `win-${Date.now()}`,
+                name: `Minigame Win`,
+                rarity: SkinRarity.Covert,
+                image: 'https://i.imgur.com/8kO4s2x.png',
+                price: profit,
+                chance: 0,
+            };
+        }
+        
+        setUser(prev => prev ? { ...prev, balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin } : null);
+
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ balance: newBalance, total_wagered: newTotalWagered, total_won: newTotalWon, best_win: newBestWin })
+            .eq('id', user.id);
+        
+        if (updateError) {
+            console.error("Error processing wager:", updateError.message);
+            checkUserStatus();
+            return { success: false, error: updateError };
+        }
+
+        return { success: true };
+    };
+
 
     const updateAvatar = async (avatarUrl: string) => {
         if (!user) return;
@@ -414,6 +465,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         checkUserStatus,
         authModalOpen,
         setAuthModalOpen,
+        processGameWager,
     };
 
     return (

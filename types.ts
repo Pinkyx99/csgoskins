@@ -82,6 +82,7 @@ export interface FullPublicProfile extends PublicProfile {
     best_win: Skin | null;
     total_wagered: number;
     total_won: number;
+    inventory?: Skin[];
 }
 
 export interface Transaction {
@@ -147,4 +148,25 @@ export interface Reel {
     winnerIndex?: number;
     isFinished: boolean;
     isPlaceholder?: boolean;
+}
+
+// --- Trade Types ---
+export type TradeOfferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
+
+export interface TradeOffer {
+    id: string;
+    created_at: string;
+    sender_id: string;
+    recipient_id: string;
+    sender_items: string[]; // instance_ids
+    recipient_items: string[]; // instance_ids
+    status: TradeOfferStatus;
+    expires_at: string;
+    // For display, populated client-side
+    sender_username?: string;
+    sender_avatar_url?: string;
+    recipient_username?: string;
+    recipient_avatar_url?: string;
+    sender_skins?: Skin[];
+    recipient_skins?: Skin[];
 }

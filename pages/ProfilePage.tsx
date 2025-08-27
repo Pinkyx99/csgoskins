@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useState } from 'react';
 import { useUser } from '../hooks/useUser';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +7,7 @@ import { Skin, Transaction } from '../types';
 import InventorySkinCard from '../components/profile/InventorySkinCard';
 import { rarityStyles } from '../constants';
 import { SkinRarity } from '../types';
+import TradesTab from '../components/trade/TradesTab';
 
 const StatCard = ({ label, value }: { label: string, value: string | number}) => (
     <div className="bg-[#0d1a2f] p-4 rounded-lg text-center border border-blue-900/50">
@@ -23,7 +23,7 @@ const ProfilePage: React.FC = () => {
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'profile' | 'transactions'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'transactions' | 'trades'>('profile');
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loadingTransactions, setLoadingTransactions] = useState(false);
     const [sellingSkinIds, setSellingSkinIds] = useState<string[]>([]);
@@ -104,6 +104,7 @@ const ProfilePage: React.FC = () => {
             <div className="flex items-center gap-6">
                 <button onClick={() => setActiveTab('profile')} className={`py-3 font-semibold flex items-center gap-2 ${activeTab === 'profile' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/></svg> Profile</button>
                 <button onClick={() => setActiveTab('transactions')} className={`py-3 font-semibold flex items-center gap-2 ${activeTab === 'transactions' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/><path d="M2 1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V1zm11 0H3v14h3.5a.5.5 0 0 1 .5.5c0 .276.224.5.5.5h2a.5.5 0 0 0 .5-.5.5.5 0 0 1 .5-.5H13V1z"/></svg> Transactions</button>
+                <button onClick={() => setActiveTab('trades')} className={`py-3 font-semibold flex items-center gap-2 ${activeTab === 'trades' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M16 10h-4.268a2.5 2.5 0 1 0 0 2h4.268a2.5 2.5 0 1 0 0-2zm-4.57 2.427a.5.5 0 0 1 .427.223l.75.937a.5.5 0 1 1-.854.54l-.75-.937a.5.5 0 0 1 .427-.223zM12.5 11.5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1z"/><path d="M0 2a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V2zm14 1v3H2V3h12zM2 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5z"/></svg> Trades</button>
             </div>
         </div>
     );
@@ -133,7 +134,7 @@ const ProfilePage: React.FC = () => {
     return (
         <div className="container mx-auto px-4 py-6 fade-in-up">
             <ProfileNav />
-            {activeTab === 'profile' ? (
+            {activeTab === 'profile' && (
                 <>
                     <div className="bg-[#12233f] border border-blue-900/50 rounded-lg p-6 mb-6 flex flex-col md:flex-row items-start gap-6">
                         <div className="flex items-start gap-4 flex-shrink-0">
@@ -196,7 +197,8 @@ const ProfilePage: React.FC = () => {
                         )}
                     </div>
                 </>
-            ) : (
+            )}
+            {activeTab === 'transactions' && (
                 <div className="bg-[#12233f] border border-blue-900/50 rounded-lg p-6">
                     <h2 className="text-xl font-bold mb-4">Transaction History</h2>
                     {loadingTransactions ? (
@@ -222,6 +224,7 @@ const ProfilePage: React.FC = () => {
                                                 <td className="px-4 py-3 text-gray-300">{new Date(t.created_at).toLocaleString()}</td>
                                                 <td className={`px-4 py-3 font-semibold ${isSender ? 'text-red-400' : 'text-green-400'}`}>{isSender ? 'Sent' : 'Received'}</td>
                                                 <td className="px-4 py-3 text-white">{isSender ? t.recipient_username : t.sender_username}</td>
+                                                {/* FIX: JSX bug in amount rendering */}
                                                 <td className={`px-4 py-3 text-right font-semibold ${isSender ? 'text-red-400' : 'text-green-400'}`}>{isSender ? '-' : '+'}{t.amount.toFixed(2)}€</td>
                                             </tr>
                                         );
@@ -232,8 +235,10 @@ const ProfilePage: React.FC = () => {
                     )}
                 </div>
             )}
+            {activeTab === 'trades' && <TradesTab />}
         </div>
     );
 };
 
+// FIX: Change to default export
 export default ProfilePage;

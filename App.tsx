@@ -1,4 +1,6 @@
 
+
+
 import React, { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/layout/Header';
@@ -9,6 +11,7 @@ import UpgraderPage from './pages/UpgraderPage';
 import AuthModal from './components/auth/AuthModal';
 import { useUser } from './hooks/useUser';
 import ChatPanel from './components/chat/ChatPanel';
+// FIX: Module '"file:///pages/ProfilePage"' has no default export.
 import ProfilePage from './pages/ProfilePage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import PublicProfilePage from './pages/PublicProfilePage';
@@ -17,6 +20,9 @@ import AnnouncementBanner from './components/events/AnnouncementBanner';
 import AdminConsole from './components/admin/AdminConsole';
 import CaseBattlesPage from './pages/CaseBattlesPage';
 import CaseBattleRoomPage from './pages/CaseBattleRoomPage';
+import GamesPage from './pages/GamesPage';
+import MinesPage from './pages/MinesPage';
+import CoinflipPage from './pages/CoinflipPage';
 
 const App: React.FC = () => {
     const { user, authModalOpen, setAuthModalOpen, checkUserStatus } = useUser();
@@ -47,28 +53,4 @@ const App: React.FC = () => {
     return (
         <HashRouter>
             <div className="min-h-screen bg-[#0d1a2f] text-white">
-                <Header onAdminConsoleOpen={() => setIsAdminConsoleOpen(true)} />
-                <AnnouncementBanner />
-                <ChatPanel />
-                <main>
-                    <Routes>
-                        <Route path="/" element={<HomePage />} />
-                        <Route path="/cases" element={<CasesPage />} />
-                        <Route path="/upgrader" element={<UpgraderPage />} />
-                        <Route path="/case-battles" element={<CaseBattlesPage />} />
-                        <Route path="/case-battles/:battleId" element={<CaseBattleRoomPage />} />
-                        <Route path="/leaderboard" element={<LeaderboardPage />} />
-                        <Route path="/exchanger" element={<PlaceholderPage title="Exchanger" />} />
-                        <Route path="/profile" element={<ProfilePage />} />
-                        <Route path="/user/:username" element={<PublicProfilePage />} />
-                        <Route path="*" element={<Navigate to="/" />} />
-                    </Routes>
-                </main>
-                {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
-                {isAdminConsoleOpen && <AdminConsole onClose={() => setIsAdminConsoleOpen(false)} />}
-            </div>
-        </HashRouter>
-    );
-};
-
-export default App;
+                <Header onAdminConsoleOpen={() => setIsAdminConsole

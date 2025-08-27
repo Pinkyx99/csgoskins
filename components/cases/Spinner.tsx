@@ -3,20 +3,24 @@ import { Case, Skin, SkinWear, Reel } from '../../types';
 import { useUser } from '../../hooks/useUser';
 import Button from '../ui/Button';
 import SpinnerReel from './SpinnerReel';
+import { JESTER_MODE_DATA } from '../../constants';
 
 interface SpinnerProps {
     selectedCase: Case;
+    balancedItems: Skin[];
     numToOpen: number;
     isSpinning: boolean;
     setIsSpinning: (isSpinning: boolean) => void;
     onSpinEnd: (winnings: Skin[]) => void;
     children: ReactNode;
+    isJesterMode?: boolean;
 }
 
 interface SpinnerContextType {
     handleOpenCase: () => void;
     totalPrice: number;
     isSpinning: boolean;
+    isJesterMode?: boolean;
 }
 
 interface SpinnerButtonProps {
@@ -33,7 +37,7 @@ const WinningMarker = () => (
 export const SPINNER_DURATION_MS = 8000;
 export const POST_SPIN_RESULT_MS = 1500;
 
-const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> } = ({ selectedCase, numToOpen, isSpinning, setIsSpinning, children, onSpinEnd }) => {
+const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> } = ({ selectedCase, balancedItems, numToOpen, isSpinning, setIsSpinning, children, onSpinEnd, isJesterMode }) => {
     const [reels, setReels] = useState<Reel[]>([]);
     const [finishedReelCount, setFinishedReelCount] = useState(0);
     const { user } = useUser();
@@ -68,19 +72,7 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
     }, [finishedReelCount, numToOpen, onSpinEnd, setIsSpinning, reels]);
 
 
-    const openCase = (caseItems: Skin[]): Skin => {
-        const totalCaseChance = caseItems.reduce((sum, item) => sum + item.chance, 0);
-        let random = Math.random() * totalCaseChance;
-        let chosenBaseSkin: Skin | null = null;
-        for (const item of caseItems) {
-            if (random < item.chance) {
-                chosenBaseSkin = item;
-                break;
-            }
-            random -= item.chance;
-        }
-        if (!chosenBaseSkin) chosenBaseSkin = caseItems[caseItems.length-1];
-
+    const applyWearToSkin = (chosenBaseSkin: Skin): Skin => {
         if (chosenBaseSkin.wears && chosenBaseSkin.wears.length > 0) {
             const totalWearsChance = chosenBaseSkin.wears.reduce((sum, wear) => sum + wear.chance, 0);
             let randomWear = Math.random() * totalWearsChance;
@@ -105,9 +97,31 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
         }
         return chosenBaseSkin;
     };
+    
+    const determineWinningSkin = (items: Skin[], useEqualOdds: boolean): Skin => {
+        let chosenBaseSkin: Skin | null = null;
+        if (useEqualOdds) {
+            const winnerIndex = Math.floor(Math.random() * items.length);
+            chosenBaseSkin = items[winnerIndex];
+        } else {
+            const totalCaseChance = 100;
+            let random = Math.random() * totalCaseChance;
+            for (const item of items) {
+                if (random < item.chance) {
+                    chosenBaseSkin = item;
+                    break;
+                }
+                random -= item.chance;
+            }
+            if (!chosenBaseSkin) chosenBaseSkin = items[items.length - 1];
+        }
+        return applyWearToSkin(chosenBaseSkin);
+    };
 
     const handleOpenCase = useCallback(async () => {
-        const totalCost = selectedCase.price * numToOpen;
+        const jesterPrice = isJesterMode ? (JESTER_MODE_DATA[selectedCase.id]?.price ?? selectedCase.price) : selectedCase.price;
+        const totalCost = jesterPrice * numToOpen;
+        
         if (isSpinning || !user || !selectedCase || user.balance < totalCost) {
             if (user && selectedCase && user.balance < totalCost) {
                 alert("Insufficient balance!");
@@ -117,7 +131,6 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
 
         setIsSpinning(true);
         setFinishedReelCount(0);
-        // The balance update and stat tracking will be handled in CasesPage after the spin result.
 
         const newReels: Reel[] = [];
         
@@ -126,7 +139,8 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
         const lowTierItems = sortedItems.slice(5);
 
         for (let i = 0; i < numToOpen; i++) {
-            const winner = openCase(selectedCase.items);
+            const itemsToUseForWin = isJesterMode ? selectedCase.items : balancedItems;
+            const winner = determineWinningSkin(itemsToUseForWin, !!isJesterMode);
 
             const REEL_LENGTH = 150;
             const WINNER_INDEX_MIN = 105;
@@ -163,17 +177,19 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
         
         setReels(newReels);
 
-    }, [isSpinning, user, selectedCase, numToOpen, setIsSpinning]);
+    }, [isSpinning, user, selectedCase, numToOpen, setIsSpinning, balancedItems, isJesterMode]);
     
     const handleReelAnimationComplete = useCallback(() => {
         setFinishedReelCount(count => count + 1);
     }, []);
 
-    const totalPrice = selectedCase.price * numToOpen;
+    const jesterPrice = isJesterMode ? (JESTER_MODE_DATA[selectedCase.id]?.price ?? selectedCase.price) : selectedCase.price;
+    const totalPrice = jesterPrice * numToOpen;
+    
 
     return (
-        <SpinnerContext.Provider value={{ handleOpenCase, totalPrice, isSpinning }}>
-            <div className="relative w-full overflow-hidden bg-black/20 rounded-lg p-4 flex flex-col items-center justify-center gap-2 border-2 border-slate-800">
+        <SpinnerContext.Provider value={{ handleOpenCase, totalPrice, isSpinning, isJesterMode }}>
+            <div className={`relative w-full overflow-hidden ${isJesterMode ? 'bg-gradient-to-b from-purple-900 via-purple-800/80 to-[#12233f]' : 'bg-black/20'} rounded-lg p-4 flex flex-col items-center justify-center gap-2 border-2 ${isJesterMode ? 'border-purple-500' : 'border-slate-800'} transition-all duration-500`}>
                 <WinningMarker />
                 <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[#0d1a2f] via-[#0d1a2f]/80 to-transparent z-20 pointer-events-none"></div>
                 <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-[#0d1a2f] via-[#0d1a2f]/80 to-transparent z-20 pointer-events-none"></div>
@@ -200,10 +216,15 @@ const Spinner: React.FC<SpinnerProps> & { Button: React.FC<SpinnerButtonProps> }
 const SpinnerButton: React.FC<SpinnerButtonProps> = ({ canAfford }) => {
     const context = useContext(SpinnerContext);
     if (!context) return null;
-    const { handleOpenCase, totalPrice, isSpinning } = context;
+    const { handleOpenCase, totalPrice, isSpinning, isJesterMode } = context;
     return (
-        <Button onClick={handleOpenCase} disabled={isSpinning || !canAfford} variant="glow" className="min-w-[200px] text-lg py-3">
-            {isSpinning ? 'Spinning...' : `Open for $${totalPrice.toFixed(2)}`}
+        <Button 
+            onClick={handleOpenCase} 
+            disabled={isSpinning || !canAfford} 
+            variant={isJesterMode ? 'secondary' : 'glow'} 
+            className={`${isJesterMode ? '!bg-purple-600 hover:!bg-purple-500 focus:ring-purple-500 !shadow-[0_0_15px_rgba(168,85,247,0.8)]' : ''} min-w-[200px] text-lg py-3`}
+        >
+            {isSpinning ? 'Spinning...' : `Open for ${totalPrice.toFixed(2)}€`}
         </Button>
     );
 };

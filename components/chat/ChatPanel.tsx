@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../hooks/useUser';
@@ -69,8 +68,13 @@ const ChatPanel: React.FC = () => {
         if (!user || !newMessage.trim()) return;
 
         setLoading(true);
-        const content = newMessage.trim();
+        let content = newMessage.trim();
+        const originalMessage = content;
         setNewMessage('');
+
+        if (content.toLowerCase() === '!bal' || content.toLowerCase() === '/bal') {
+            content = `My current balance is ${user.balance.toFixed(2)}€`;
+        }
 
         const { data, error } = await supabase
             .from('chat_messages')
@@ -85,7 +89,7 @@ const ChatPanel: React.FC = () => {
 
         if (error) {
             console.error('Error sending message:', error);
-            setNewMessage(content); 
+            setNewMessage(originalMessage); 
         } else if (data) {
             setMessages(currentMessages => [...currentMessages, data as ChatMessage]);
         }

@@ -20,7 +20,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onAdminConsoleOpen }) => {
     const { user, setAuthModalOpen } = useUser();
     
-    const navItems = ['Cases', 'Upgrader', 'Case Battles', 'Leaderboard', 'Exchanger'];
+    const navItems = ['Cases', 'Upgrader', 'Case Battles', 'Games', 'Leaderboard', 'Exchanger'];
 
     const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
         `py-2 relative font-semibold transition-colors ${
@@ -69,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({ onAdminConsoleOpen }) => {
                             <div className="bg-[#0f172a] border border-blue-800/50 rounded-md flex items-center">
                                 <div className='flex items-center gap-2 px-3 py-1.5'>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="text-green-400" viewBox="0 0 16 16"><path d="M1.5 3.5a.5.5 0 0 1 .5-.5h11.5a.5.5 0 0 1 0 1H2a.5.5 0 0 1-.5-.5zM1.5 6.5a.5.5 0 0 1 .5-.5h8.5a.5.5 0 0 1 0 1H2a.5.5 0 0 1-.5-.5zm5.5 3a.5.5 0 0 1 .5-.5h2.5a.5.5 0 0 1 0 1H7.5a.5.5 0 0 1-.5-.5z"/><path d="M0 2a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V2zm1 0v12h14V2H1z"/></svg>
-                                    <span className="text-white font-semibold text-md">${user.balance.toFixed(2)}</span>
+                                    <span className="text-white font-semibold text-md">{user.balance.toFixed(2)}€</span>
                                 </div>
                                 <button className="bg-green-500/20 text-green-400 h-full px-3 border-l border-blue-800/50 hover:bg-green-500/40 transition-colors">+</button>
                             </div>

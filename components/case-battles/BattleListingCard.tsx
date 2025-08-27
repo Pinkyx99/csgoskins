@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CaseBattle } from '../../types';
@@ -18,6 +17,10 @@ const BattleListingCard: React.FC<BattleListingCardProps> = ({ battle }) => {
     const handleJoin = async () => {
         if (!user) {
             setAuthModalOpen(true);
+            return;
+        }
+        if (user.balance < battle.total_value) {
+            alert('Insufficient balance to join this battle.');
             return;
         }
         setIsJoining(true);

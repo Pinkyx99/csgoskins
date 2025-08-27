@@ -1,6 +1,3 @@
-
-
-
 import React, { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/layout/Header';
@@ -11,7 +8,6 @@ import UpgraderPage from './pages/UpgraderPage';
 import AuthModal from './components/auth/AuthModal';
 import { useUser } from './hooks/useUser';
 import ChatPanel from './components/chat/ChatPanel';
-// FIX: Module '"file:///pages/ProfilePage"' has no default export.
 import ProfilePage from './pages/ProfilePage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import PublicProfilePage from './pages/PublicProfilePage';
@@ -45,7 +41,6 @@ const App: React.FC = () => {
     
     const isPermanentlyBanned = user?.is_banned && user.ban_expires_at === null;
 
-
     if (isBanned || isPermanentlyBanned) {
         return <BannedScreen />;
     }
@@ -53,4 +48,31 @@ const App: React.FC = () => {
     return (
         <HashRouter>
             <div className="min-h-screen bg-[#0d1a2f] text-white">
-                <Header onAdminConsoleOpen={() => setIsAdminConsole
+                <Header onAdminConsoleOpen={() => setIsAdminConsoleOpen(true)} />
+
+                <AnnouncementBanner />
+                <ChatPanel />
+
+                <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/cases" element={<CasesPage />} />
+                    <Route path="/upgrader" element={<UpgraderPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/leaderboard" element={<LeaderboardPage />} />
+                    <Route path="/profile/:id" element={<PublicProfilePage />} />
+                    <Route path="/case-battles" element={<CaseBattlesPage />} />
+                    <Route path="/case-battles/:id" element={<CaseBattleRoomPage />} />
+                    <Route path="/games" element={<GamesPage />} />
+                    <Route path="/games/mines" element={<MinesPage />} />
+                    <Route path="/games/coinflip" element={<CoinflipPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+
+                {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
+                {isAdminConsoleOpen && <AdminConsole onClose={() => setIsAdminConsoleOpen(false)} />}
+            </div>
+        </HashRouter>
+    );
+};
+
+export default App;

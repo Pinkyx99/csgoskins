@@ -116,5 +116,139 @@
       }
       .spin-reel.finished .spinner-item:not(.winner) .inner-card-wrapper {
         transition: filter 0.4s ease-out, transform 0.4s ease-out;
-        filter: grayscale<link rel="stylesheet" href="/index.css">
-<script type="module" src="/index.tsx"></script>
+        filter: grayscale(1) brightness(0.5) blur(1px);
+        transform: scale(0.9);
+      }
+      .spinner-item.winner { z-index: 10; }
+      .winner .shine-effect {
+        content: ""; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+        background: linear-gradient(100deg, rgba(255, 255, 255, 0) 20%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0) 80%);
+        animation: shine 1.2s ease-in-out;
+        z-index: 20; border-radius: 0.5rem;
+      }
+
+      /* Custom Input Styles */
+      input[type=range] {
+        -webkit-appearance: none; appearance: none;
+        width: 100%; background: transparent;
+      }
+      input[type=range]:focus { outline: none; }
+      input[type=range]::-webkit-slider-runnable-track {
+        width: 100%; height: 8px; cursor: pointer;
+        background: linear-gradient(to right, var(--color-primary) var(--range-progress, 0%), var(--color-bg-light) 0%);
+        border-radius: 4px; border: 1px solid var(--color-border);
+      }
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none; height: 20px; width: 20px;
+        border-radius: 50%; background: var(--color-primary-light);
+        cursor: pointer; margin-top: -7px;
+        border: 2px solid var(--color-bg);
+        box-shadow: 0 0 5px rgba(96, 165, 250, 0.5);
+      }
+      input[type=range]::-moz-range-track {
+        width: 100%; height: 8px; cursor: pointer;
+        background: linear-gradient(to right, var(--color-primary) var(--range-progress, 0%), var(--color-bg-light) 0%);
+        border-radius: 4px; border: 1px solid var(--color-border);
+      }
+      input[type=range]::-moz-range-thumb {
+        height: 20px; width: 20px; border-radius: 50%;
+        background: var(--color-primary-light); cursor: pointer;
+        border: 2px solid var(--color-bg);
+        box-shadow: 0 0 5px rgba(96, 165, 250, 0.5);
+      }
+      
+      /* Custom Checkbox */
+      @keyframes checkbox-pop {
+        0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+        50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      }
+      .form-checkbox {
+        transition: all 0.2s ease-in-out; position: relative;
+        -webkit-appearance: none; appearance: none;
+        background-color: var(--color-bg);
+        border: 1px solid var(--color-border);
+      }
+      .form-checkbox:checked {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary-light);
+      }
+      .form-checkbox:checked::after {
+        content: '✔'; position: absolute;
+        color: white; font-size: 12px; line-height: 1;
+        top: 50%; left: 50%; transform: translate(-50%, -50%);
+        animation: checkbox-pop 0.3s ease-out;
+      }
+
+      /* MINES */
+      .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; }
+      .mine-tile {
+        aspect-ratio: 1 / 1; border-radius: 0.5rem; cursor: pointer;
+        transition: transform 0.2s ease, background-color 0.2s ease;
+        will-change: transform; perspective: 1000px;
+      }
+      .mine-tile.revealed { cursor: default; }
+      .mine-tile:not(.revealed):hover { transform: scale(1.05); background-color: var(--color-primary); }
+      .mine-tile-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+      .mine-tile.revealed .mine-tile-inner { transform: rotateY(180deg); }
+      .mine-tile-front, .mine-tile-back {
+        position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+        display: flex; align-items: center; justify-content: center; border-radius: 0.5rem;
+      }
+      .mine-tile-front { background-color: var(--color-bg-light); border: 1px solid var(--color-border); }
+      .mine-tile-back { transform: rotateY(180deg); }
+      .tile-gem { background-color: #166534; }
+      .tile-mine { background-color: #991b1b; }
+      @keyframes mine-explosion {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        50% { transform: scale(1.1); box-shadow: 0 0 20px 10px rgba(239, 68, 68, 0.4); }
+        100% { transform: scale(1); box-shadow: 0 0 30px 25px rgba(239, 68, 68, 0); }
+      }
+      .mine-busted { animation: mine-explosion 0.5s ease-out; }
+      
+      /* COINFLIP */
+      .coin-container { perspective: 1000px; }
+      .coin {
+        width: 150px; height: 150px; position: relative;
+        transform-style: preserve-3d;
+        transition: transform 4s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .coin-face {
+        position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+        display: flex; align-items: center; justify-content: center; border-radius: 50%;
+        background-size: 80%; background-repeat: no-repeat; background-position: center;
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+      }
+      .coin-t { background-image: url('https://i.imgur.com/IdFLbGN.png'), radial-gradient(circle, #ffc977, #f97316); }
+      .coin-ct { background-image: url('https://i.imgur.com/QB3JUf7.png'), radial-gradient(circle, #8cb5f9, #3b82f6); transform: rotateY(180deg); }
+      @keyframes glow-t {
+        0% { box-shadow: 0 0 5px #f97316; transform: scale(1); }
+        50% { box-shadow: 0 0 35px #ffc977, 0 0 15px #f97316; transform: scale(1.05); }
+        100% { box-shadow: 0 0 5px #f97316; transform: scale(1); }
+      }
+      .glow-t { animation: glow-t 1s ease-in-out forwards; }
+      @keyframes glow-ct {
+        0% { box-shadow: 0 0 5px #3b82f6; transform: scale(1); }
+        50% { box-shadow: 0 0 35px #8cb5f9, 0 0 15px #3b82f6; transform: scale(1.05); }
+        100% { box-shadow: 0 0 5px #3b82f6; transform: scale(1); }
+      }
+      .glow-ct { animation: glow-ct 1s ease-in-out forwards; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "react": "https://esm.sh/react@^19.1.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.8.2",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>

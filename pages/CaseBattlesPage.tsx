@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import Button from '../components/ui/Button';
 import CreateBattleModal from '../components/case-battles/CreateBattleModal';
@@ -39,8 +37,33 @@ const CaseBattlesPage: React.FC = () => {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'case_battles' },
                 (payload) => {
-                   // Just refetch all for simplicity
-                   fetchBattles();
+                    const { eventType, new: newRecord, old: oldRecord } = payload;
+                    setBattles(currentBattles => {
+                        let updatedBattles = [...currentBattles];
+                        if (eventType === 'INSERT') {
+                            const newBattle = newRecord as CaseBattle;
+                            if (newBattle.status === 'waiting' && !updatedBattles.some(b => b.id === newBattle.id)) {
+                                updatedBattles.unshift(newBattle); // Add to top
+                            }
+                        } else if (eventType === 'UPDATE') {
+                            const updatedBattle = newRecord as CaseBattle;
+                            const index = updatedBattles.findIndex(b => b.id === updatedBattle.id);
+                            if (index !== -1) {
+                                if (updatedBattle.status === 'waiting') {
+                                    updatedBattles[index] = updatedBattle; // Update in place
+                                } else {
+                                    updatedBattles.splice(index, 1); // Remove if not waiting anymore
+                                }
+                            } else if (updatedBattle.status === 'waiting') {
+                                // If it wasn't in the list but is now waiting, add it.
+                                updatedBattles.unshift(updatedBattle);
+                            }
+                        } else if (eventType === 'DELETE') {
+                            const oldBattle = oldRecord as { id: string };
+                            updatedBattles = updatedBattles.filter(b => b.id !== oldBattle.id);
+                        }
+                        return updatedBattles.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                    });
                 }
             )
             .subscribe();

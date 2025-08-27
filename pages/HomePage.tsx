@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MOCK_CASES } from '../constants';
 import CaseCard from '../components/ui/CaseCard';
@@ -10,6 +10,26 @@ const HomePage: React.FC = () => {
     const [price, setPrice] = useState(400);
     const [showEnoughBalance, setShowEnoughBalance] = useState(false);
     const [showFavorites, setShowFavorites] = useState(false);
+    const [timeLeft, setTimeLeft] = useState('');
+
+     useEffect(() => {
+        const calculateTimeLeft = () => {
+            const now = new Date();
+            const endOfDay = new Date(now);
+            endOfDay.setHours(23, 59, 59, 999);
+            const difference = endOfDay.getTime() - now.getTime();
+
+            let hours = String(Math.floor((difference / (1000 * 60 * 60)) % 24)).padStart(2, '0');
+            let minutes = String(Math.floor((difference / 1000 / 60) % 60)).padStart(2, '0');
+            let seconds = String(Math.floor((difference / 1000) % 60)).padStart(2, '0');
+
+            setTimeLeft(`${hours}:${minutes}:${seconds}`);
+        };
+
+        const timer = setInterval(calculateTimeLeft, 1000);
+        calculateTimeLeft(); // initial call
+        return () => clearInterval(timer);
+    }, []);
 
     const filteredCases = useMemo(() => {
         return MOCK_CASES.filter(c => {
@@ -35,6 +55,29 @@ const HomePage: React.FC = () => {
     return (
         <div className="container mx-auto px-4 py-6">
             
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 fade-in-up">
+                <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-lg p-6 flex items-center justify-between shadow-lg">
+                    <div>
+                        <h2 className="text-2xl font-bold">New Wasteland Case</h2>
+                        <p className="text-blue-200 mt-1">Unbox exclusive post-apocalyptic skins!</p>
+                        <button onClick={() => navigate('/cases?case=c17')} className="mt-4 bg-white/20 text-white font-semibold px-4 py-2 rounded-md hover:bg-white/30 transition-colors">
+                            Check it out
+                        </button>
+                    </div>
+                    <img src="https://media.csgo-skins.com/container/wasteland-case.png" alt="Wasteland Case" className="w-28 h-28 object-contain -mr-4" />
+                </div>
+                <div className="bg-gradient-to-br from-orange-500 to-yellow-600 rounded-lg p-6 flex items-center justify-between shadow-lg">
+                    <div>
+                        <h2 className="text-2xl font-bold">Daily Free Case</h2>
+                        <p className="text-orange-200 mt-1">Your next free reward is waiting!</p>
+                         <div className="mt-4 bg-black/30 text-white font-mono text-xl px-4 py-2 rounded-md inline-block">
+                            {timeLeft}
+                        </div>
+                    </div>
+                     <img src="https://media.csgo-skins.com/container/daily-case.png" alt="Daily Case" className="w-28 h-28 object-contain -mr-4" />
+                </div>
+            </div>
+
              <div className="my-8 fade-in-up animation-delay-300">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {anniversaryCases.map(caseItem => (

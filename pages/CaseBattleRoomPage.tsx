@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CaseBattle, Reel, Skin, SkinWear } from '../types';
@@ -27,29 +25,31 @@ const CaseBattleRoomPage: React.FC = () => {
 
     const isCreator = useMemo(() => user && battle && user.id === battle.created_by_user_id, [user, battle]);
 
+    const fetchBattle = useCallback(async () => {
+        if (!battleId) {
+            setError("No battle ID provided.");
+            setIsLoading(false);
+            return;
+        }
+        const { data, error: fetchError } = await supabase
+            .from('case_battles')
+            .select('*')
+            .eq('id', battleId)
+            .single();
+        
+        if (fetchError || !data) {
+            setError("Battle not found or an error occurred.");
+            setBattle(null);
+            setIsLoading(false);
+        } else {
+            setBattle(data as CaseBattle);
+            if (isLoading) setIsLoading(false);
+            setError(null);
+        }
+    }, [battleId, isLoading]);
+
     // --- Fetch initial battle state and subscribe to updates ---
     useEffect(() => {
-        const fetchBattle = async () => {
-            if (!battleId) {
-                setError("No battle ID provided.");
-                setIsLoading(false);
-                return;
-            }
-            const { data, error: fetchError } = await supabase
-                .from('case_battles')
-                .select('*')
-                .eq('id', battleId)
-                .single();
-            
-            if (fetchError || !data) {
-                setError("Battle not found or an error occurred.");
-                setIsLoading(false);
-            } else {
-                setBattle(data as CaseBattle);
-                setIsLoading(false);
-            }
-        };
-
         fetchBattle();
 
         const channel = supabase
@@ -59,14 +59,14 @@ const CaseBattleRoomPage: React.FC = () => {
                 schema: 'public',
                 table: 'case_battles',
                 filter: `id=eq.${battleId}`
-            }, payload => {
-                setBattle(payload.new as CaseBattle);
+            }, () => {
+                fetchBattle();
             }).subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [battleId]);
+    }, [battleId, fetchBattle]);
 
     // --- Game State Logic ---
     const openCase = useCallback((caseItems: Skin[]): Skin => {
